@@ -299,8 +299,15 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 5vh 5vw;
+  padding: 5vh 12vw 5vh 5vw; /* Increased right padding to accommodate hackathon badge */
   box-sizing: border-box;
+}
+
+/* Mobile responsive padding for smaller badge */
+@media (max-width: 768px) {
+  .terminal-container {
+    padding: 5vh 8vw 5vh 5vw; /* Reduced right padding for mobile badge size */
+  }
 }
 
 .terminal-container :deep(.terminal-window) {

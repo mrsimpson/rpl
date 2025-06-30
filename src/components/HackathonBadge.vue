@@ -77,6 +77,8 @@ const badgePosition = computed(() => {
   width: 180px;
   height: 180px;
   pointer-events: none;
+  position: absolute;
+  right: 0px;
 }
 
 .folded-corner {
@@ -125,6 +127,8 @@ const badgePosition = computed(() => {
     right: 0 !important;
     width: 130px;
     height: 130px;
+    position: absolute;
+    right: 0px;
   }
   
   .folded-corner {
