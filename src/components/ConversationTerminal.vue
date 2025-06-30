@@ -54,7 +54,7 @@
           <div v-if="showGhostMessage" class="ghost-preview">
             <span class="ghost-prefix">{{ getMessagePrefix(nextMessage.type) }}</span>
             <span class="ghost-content">
-              <span class="terminal-cursor" v-if="cursorAtStart && shouldShowCursor">█</span><span class="ghost-text">{{ nextMessage.content.substring(cursorAtStart ? 1 : 0) }}</span>
+              <span class="terminal-cursor" v-if="cursorAtStart ">█</span><span class="ghost-text">{{ nextMessage.content}}</span>
             </span>
           </div>
 
@@ -90,7 +90,7 @@ const props = defineProps<{
   settings: Settings;
 }>();
 
-const emit = defineEmits<{
+defineEmits<{
   reset: [];
 }>();
 
@@ -110,9 +110,6 @@ const nextMessage = computed(
   () => props.conversationData.messages[currentMessageIndex.value + 1]
 );
 
-const currentMessage = computed(
-  () => props.conversationData.messages[currentMessageIndex.value]
-);
 
 // State-based computed properties
 const showGhostMessage = computed(() => {
@@ -136,26 +133,12 @@ const cursorAtStart = computed(() =>
   conversationState.value === 'waiting_for_user' && showGhostMessage.value
 );
 
-const cursorAtEnd = computed(() => 
-  conversationState.value === 'user_typing' && showCompletedUserMessage.value
-);
 
 const togglePlayback = () => {
   // For now, keep simple - can be enhanced later
   console.log('Toggle playback - state machine handles flow');
 };
 
-const advanceToNextUserMessage = () => {
-  // Find next user message and set state to waiting
-  const nextUserIndex = props.conversationData.messages.findIndex(
-    (msg, index) => index > currentMessageIndex.value && msg.type === 'human'
-  );
-  
-  if (nextUserIndex !== -1) {
-    currentMessageIndex.value = nextUserIndex - 1; // Position before the user message
-    conversationState.value = 'waiting_for_user';
-  }
-};
 
 const completeUserMessage = () => {
   // TAB pressed - show completed user message

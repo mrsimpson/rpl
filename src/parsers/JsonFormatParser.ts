@@ -43,26 +43,83 @@ export class JsonFormatParser implements FormatParser {
           })
         }
 
-        // Extract assistant response
-        if (assistantTurn?.ToolUse?.content) {
-          messages.push({
-            id: (messageId++).toString(),
-            type: 'agent',
-            content: assistantTurn.ToolUse.content,
-            timestamp: new Date().toISOString()
-          })
-        }
-
-        // Extract tool calls if present
-        if (assistantTurn?.ToolUse?.tool_uses) {
-          for (const toolUse of assistantTurn.ToolUse.tool_uses) {
+        // Handle different assistant response types
+        if (assistantTurn?.ToolUse) {
+          const toolUse = assistantTurn.ToolUse
+          
+          // Add agent message if there's content
+          if (toolUse.content) {
             messages.push({
               id: (messageId++).toString(),
-              type: 'tool_call',
-              content: `${toolUse.name}(${JSON.stringify(toolUse.args)})`,
+              type: 'agent',
+              content: toolUse.content,
               timestamp: new Date().toISOString()
             })
           }
+
+          // Add tool calls
+          if (toolUse.tool_uses) {
+            for (const tool of toolUse.tool_uses) {
+              messages.push({
+                id: (messageId++).toString(),
+                type: 'tool_call',
+                content: JSON.stringify({
+                  type: 'tool_use',
+                  name: tool.name,
+                  args: tool.args,
+                  id: tool.id
+                }),
+                timestamp: new Date().toISOString(),
+                metadata: {
+                  toolName: tool.name,
+                  toolId: tool.id,
+                  toolType: 'use'
+                }
+              })
+            }
+          }
+        }
+
+        // Handle tool results
+        if (assistantTurn?.content?.ToolUseResults) {
+          const results = assistantTurn.content.ToolUseResults.tool_use_results
+          for (const result of results) {
+            messages.push({
+              id: (messageId++).toString(),
+              type: 'tool_call',
+              content: JSON.stringify({
+                type: 'tool_result',
+                tool_use_id: result.tool_use_id,
+                content: result.content,
+                status: result.status
+              }),
+              timestamp: new Date().toISOString(),
+              metadata: {
+                toolId: result.tool_use_id,
+                toolType: 'result',
+                status: result.status
+              }
+            })
+          }
+        }
+
+        // Handle cancelled tool uses
+        if (assistantTurn?.content?.CancelledToolUses) {
+          const cancelled = assistantTurn.content.CancelledToolUses
+          messages.push({
+            id: (messageId++).toString(),
+            type: 'tool_call',
+            content: JSON.stringify({
+              type: 'tool_cancelled',
+              prompt: cancelled.prompt,
+              tool_use_results: cancelled.tool_use_results
+            }),
+            timestamp: new Date().toISOString(),
+            metadata: {
+              toolType: 'cancelled',
+              reason: cancelled.prompt
+            }
+          })
         }
       }
     }

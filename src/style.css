@@ -430,59 +430,6 @@ body {
   font-family: inherit;
 }
 
-/* Message Styles */
-.message {
-  margin-bottom: var(--spacing-3);
-  padding: var(--spacing-1) 0;
-  width: 100%;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-}
-
-.message-human {
-  border-left: 2px solid var(--terminal-accent);
-  padding-left: var(--spacing-2);
-}
-
-.message-agent {
-  border-left: 2px solid var(--terminal-text);
-  padding-left: var(--spacing-2);
-}
-
-.message-tool_call {
-  border-left: 2px solid var(--color-warning);
-  padding-left: var(--spacing-2);
-}
-
-.message-system {
-  border-left: 2px solid var(--color-info);
-  padding-left: var(--spacing-2);
-}
-
-.message-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-1);
-  font-size: var(--font-size-sm);
-}
-
-.message-prefix {
-  font-weight: bold;
-  color: var(--terminal-accent);
-}
-
-.message-meta {
-  color: var(--terminal-dim);
-}
-
-.message-content {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  width: 100%;
-  max-width: 100%;
-}
-
 .static-content {
   color: var(--terminal-text);
 }
