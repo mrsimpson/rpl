@@ -16,13 +16,6 @@
       </header>
 
       <div class="content-area">
-        <aside v-if="showSettings" class="settings-panel">
-          <SettingsPanel 
-            :settings="settings"
-            @update-settings="updateSettings"
-          />
-        </aside>
-
         <section class="conversation-area">
           <div v-if="!conversationData" class="source-input">
             <SourceInput @load-conversation="loadConversation" />
@@ -36,6 +29,22 @@
             />
           </div>
         </section>
+      </div>
+
+      <!-- Settings Dialog -->
+      <div v-if="showSettings" class="settings-dialog-overlay" @click="closeSettings">
+        <div class="settings-dialog" @click.stop>
+          <div class="settings-header">
+            <h3>Settings</h3>
+            <button @click="closeSettings" class="close-btn">×</button>
+          </div>
+          <div class="settings-content">
+            <SettingsPanel 
+              :settings="settings"
+              @update-settings="updateSettings"
+            />
+          </div>
+        </div>
       </div>
 
       <footer class="app-footer">
@@ -80,6 +89,10 @@ const toggleSettings = () => {
   showSettings.value = !showSettings.value
 }
 
+const closeSettings = () => {
+  showSettings.value = false
+}
+
 const updateSettings = (newSettings: Partial<Settings>) => {
   Object.assign(settings, newSettings)
   localStorage.setItem('replaySettings', JSON.stringify(settings))
@@ -120,5 +133,94 @@ onMounted(() => {
 .icon {
   width: 16px;
   height: 16px;
+}
+
+.conversation-area {
+  position: relative;
+}
+
+.terminal-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 5vh 5vw;
+  box-sizing: border-box;
+}
+
+.terminal-container :deep(.terminal-window) {
+  width: 90vw;
+  height: 90vh;
+  max-width: 90vw;
+  max-height: 90vh;
+  min-width: 90vw;
+  min-height: 90vh;
+}
+
+/* Settings Dialog */
+.settings-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.settings-dialog {
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-3);
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-bg-secondary);
+}
+
+.settings-header h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: var(--transition);
+}
+
+.close-btn:hover {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
+
+.settings-content {
+  padding: var(--spacing-3);
+  max-height: calc(80vh - 80px);
+  overflow-y: auto;
 }
 </style>

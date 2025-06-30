@@ -192,7 +192,6 @@ onUnmounted(() => {
 .terminal-window {
   display: flex;
   flex-direction: column;
-  height: 100vh;
   background-color: var(--window-bg);
   border-radius: var(--window-border-radius);
   overflow: hidden;
