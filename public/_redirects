@@ -1,0 +1,3 @@
+# Netlify SPA fallback for Vue Router
+# This ensures all routes are handled by the client-side router
+/* /index.html 200
