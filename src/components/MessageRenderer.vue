@@ -1,20 +1,19 @@
 <template>
   <div class="message" :class="[`message-${message.type}`, { 'is-current': isCurrent }]">
-    <div class="message-header">
-      <span class="message-prefix">{{ messagePrefix }}</span>
+    <div class="message-line">
+      <span class="message-prefix">{{ messagePrefix }} &nbsp;</span>
+      <span class="message-content">
+        <TypewriterText
+          v-if="isCurrent"
+          :text="message.content"
+          :speed="getAnimationSpeed()"
+          @complete="$emit('animationComplete')"
+        />
+        <span v-else class="static-content">{{ message.content }}</span>
+      </span>
       <span class="message-meta">
         {{ formatTime(message.timestamp) }} | {{ message.type }}
       </span>
-    </div>
-    
-    <div class="message-content">
-      <TypewriterText
-        v-if="isCurrent"
-        :text="message.content"
-        :speed="getAnimationSpeed()"
-        @complete="$emit('animationComplete')"
-      />
-      <div v-else class="static-content">{{ message.content }}</div>
     </div>
   </div>
 </template>
@@ -54,3 +53,37 @@ const formatTime = (timestamp: string): string => {
   return new Date(timestamp).toLocaleTimeString()
 }
 </script>
+
+<style scoped>
+.message {
+  margin-bottom: var(--spacing-2);
+}
+
+.message-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-1);
+}
+
+.message-prefix {
+  color: var(--terminal-accent);
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.message-content {
+  flex: 1;
+  color: var(--terminal-text);
+}
+
+.message-meta {
+  color: var(--terminal-dim);
+  font-size: var(--font-size-sm);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.static-content {
+  display: inline;
+}
+</style>

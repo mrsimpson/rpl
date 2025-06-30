@@ -29,11 +29,13 @@
           <div class="metadata-line">
             <span class="prompt">$</span>
             <span class="command">replay_conversation</span>
-            <span class="args">"{{ conversationData.metadata.title || 'Untitled' }}"</span>
+            <span class="args"
+              >"{{ conversationData.metadata.title || "Untitled" }}"</span
+            >
           </div>
           <div class="metadata-info">
-            Messages: {{ conversationData.messages.length }} | 
-            Format: {{ conversationData.metadata.format }} |
+            Messages: {{ conversationData.messages.length }} | Format:
+            {{ conversationData.metadata.format }} |
             {{ formatDate(conversationData.metadata.timestamp) }}
           </div>
         </div>
@@ -43,18 +45,24 @@
             v-for="(message, index) in visibleMessages"
             :key="message.id"
             :message="message"
-            :is-current="index === currentMessageIndex"
+            :is-current="index === currentMessageIndex && conversationState === 'agent_typing' && message.type !== 'human'"
             :settings="settings"
             @animation-complete="onMessageComplete"
           />
-          
-          <div v-if="settings.showGhostPreview && nextMessage" class="ghost-preview">
+
+          <!-- Ghost preview of next user message -->
+          <div v-if="showGhostMessage" class="ghost-preview">
             <span class="ghost-prefix">{{ getMessagePrefix(nextMessage.type) }}</span>
-            <span class="ghost-content">{{ nextMessage.content.substring(0, 50) }}...</span>
+            <span class="ghost-content">
+              <span class="terminal-cursor" v-if="cursorAtStart && shouldShowCursor">█</span><span class="ghost-text">{{ nextMessage.content.substring(cursorAtStart ? 1 : 0) }}</span>
+            </span>
+          </div>
+
+          <!-- Completed user message with cursor at end -->
+          <div v-if="showCompletedUserMessage" class="completed-message">
+            <span class="ghost-prefix">{{ getMessagePrefix(nextMessage.type) }}</span><span class="message-content">{{ nextMessage.content }}<span class="terminal-cursor" v-if="shouldShowCursor">█</span></span>
           </div>
         </div>
-
-        <div class="terminal-cursor" v-if="showCursor">█</div>
       </div>
     </div>
 
@@ -71,139 +79,225 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { PlayIcon, PauseIcon, RotateCcwIcon, XIcon } from 'lucide-vue-next'
-import MessageRenderer from './MessageRenderer.vue'
-import ProgressIndicator from './ProgressIndicator.vue'
-import type { ConversationData, Settings } from '../types'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
+import { PlayIcon, PauseIcon, RotateCcwIcon, XIcon } from "lucide-vue-next";
+import MessageRenderer from "./MessageRenderer.vue";
+import ProgressIndicator from "./ProgressIndicator.vue";
+import type { ConversationData, Settings } from "../types";
 
 const props = defineProps<{
-  conversationData: ConversationData
-  settings: Settings
-}>()
+  conversationData: ConversationData;
+  settings: Settings;
+}>();
 
 const emit = defineEmits<{
-  reset: []
-}>()
+  reset: [];
+}>();
 
-const terminalContent = ref<HTMLElement>()
-const currentMessageIndex = ref(-1)
-const isPlaying = ref(false)
-const showCursor = ref(true)
+const terminalContent = ref<HTMLElement>();
+const currentMessageIndex = ref(-1);
+const showCursor = ref(true);
 
-const visibleMessages = computed(() => 
+// State machine for conversation flow
+type ConversationState = 'waiting_for_user' | 'user_typing' | 'agent_typing';
+const conversationState = ref<ConversationState>('waiting_for_user');
+
+const visibleMessages = computed(() =>
   props.conversationData.messages.slice(0, currentMessageIndex.value + 1)
-)
+);
 
-const nextMessage = computed(() => 
-  props.conversationData.messages[currentMessageIndex.value + 1]
-)
+const nextMessage = computed(
+  () => props.conversationData.messages[currentMessageIndex.value + 1]
+);
+
+const currentMessage = computed(
+  () => props.conversationData.messages[currentMessageIndex.value]
+);
+
+// State-based computed properties
+const showGhostMessage = computed(() => {
+  return conversationState.value === 'waiting_for_user' && 
+         nextMessage.value && 
+         nextMessage.value.type === 'human';
+});
+
+const showCompletedUserMessage = computed(() => {
+  return conversationState.value === 'user_typing' && 
+         nextMessage.value && 
+         nextMessage.value.type === 'human';
+});
+
+const shouldShowCursor = computed(() => {
+  return conversationState.value === 'waiting_for_user' || 
+         conversationState.value === 'user_typing';
+});
+
+const cursorAtStart = computed(() => 
+  conversationState.value === 'waiting_for_user' && showGhostMessage.value
+);
+
+const cursorAtEnd = computed(() => 
+  conversationState.value === 'user_typing' && showCompletedUserMessage.value
+);
 
 const togglePlayback = () => {
-  isPlaying.value = !isPlaying.value
-  if (isPlaying.value && currentMessageIndex.value < props.conversationData.messages.length - 1) {
-    advanceMessage()
-  }
-}
+  // For now, keep simple - can be enhanced later
+  console.log('Toggle playback - state machine handles flow');
+};
 
-const advanceMessage = () => {
-  if (currentMessageIndex.value < props.conversationData.messages.length - 1) {
-    currentMessageIndex.value++
-    scrollToBottom()
-    
-    // After advancing, check if we should continue auto-advancing
-    const currentMessage = props.conversationData.messages[currentMessageIndex.value]
-    const nextMessage = props.conversationData.messages[currentMessageIndex.value + 1]
-    
-    // If current message is not human and next message exists and is also not human,
-    // we'll let onMessageComplete handle the auto-advance
-    // This ensures consecutive agent messages flow smoothly
+const advanceToNextUserMessage = () => {
+  // Find next user message and set state to waiting
+  const nextUserIndex = props.conversationData.messages.findIndex(
+    (msg, index) => index > currentMessageIndex.value && msg.type === 'human'
+  );
+  
+  if (nextUserIndex !== -1) {
+    currentMessageIndex.value = nextUserIndex - 1; // Position before the user message
+    conversationState.value = 'waiting_for_user';
   }
-}
+};
+
+const completeUserMessage = () => {
+  // TAB pressed - show completed user message
+  conversationState.value = 'user_typing';
+};
+
+const submitUserMessage = () => {
+  // ENTER pressed - submit user message and start agent responses
+  if (nextMessage.value && nextMessage.value.type === 'human') {
+    // Add user message to visible messages
+    currentMessageIndex.value++;
+    conversationState.value = 'agent_typing';
+    
+    // Start agent response sequence
+    setTimeout(() => {
+      processAgentMessages();
+    }, 500);
+  }
+};
+
+const processAgentMessages = () => {
+  const nextMsg = props.conversationData.messages[currentMessageIndex.value + 1];
+  
+  if (nextMsg && nextMsg.type !== 'human') {
+    // Show next agent message
+    currentMessageIndex.value++;
+    scrollToBottom();
+    
+    // Continue with next agent message after delay
+    setTimeout(() => {
+      processAgentMessages();
+    }, 1500); // Longer delay to see each message
+  } else {
+    // No more agent messages, wait for next user input
+    conversationState.value = 'waiting_for_user';
+  }
+};
 
 const restart = () => {
-  currentMessageIndex.value = -1
-  isPlaying.value = false
-}
+  currentMessageIndex.value = -1;
+  conversationState.value = 'waiting_for_user';
+  initializeConversation();
+};
+
+const initializeConversation = () => {
+  // Check if we have messages and what the first message type is
+  if (props.conversationData.messages.length > 0) {
+    const firstMessage = props.conversationData.messages[0];
+    
+    if (firstMessage.type === 'human') {
+      // First message is user message - show it as ghost
+      currentMessageIndex.value = -1; // Position before first message
+      conversationState.value = 'waiting_for_user';
+    } else {
+      // First message is agent message - this is unusual but handle it
+      currentMessageIndex.value = -1;
+      conversationState.value = 'agent_typing';
+      setTimeout(() => {
+        processAgentMessages();
+      }, 500);
+    }
+  }
+};
 
 const onMessageComplete = () => {
-  const currentMessage = props.conversationData.messages[currentMessageIndex.value]
-  const nextMessage = props.conversationData.messages[currentMessageIndex.value + 1]
-  
-  // Auto-advance if:
-  // 1. We're in auto-play mode, OR
-  // 2. Current message is agent/system/tool_call AND next message is also agent/system/tool_call
-  const shouldAutoAdvance = isPlaying.value || 
-    (currentMessage && nextMessage && 
-     currentMessage.type !== 'human' && nextMessage.type !== 'human')
-  
-  if (shouldAutoAdvance) {
-    setTimeout(() => {
-      advanceMessage()
-    }, 1000) // Brief pause between messages
+  // In agent_typing state, continue processing agent messages
+  if (conversationState.value === 'agent_typing') {
+    // The processAgentMessages function handles the timing and continuation
+    // This event just confirms the current message finished animating
   }
-}
+};
 
 const scrollToBottom = async () => {
-  await nextTick()
+  await nextTick();
   if (terminalContent.value) {
-    terminalContent.value.scrollTop = terminalContent.value.scrollHeight
+    terminalContent.value.scrollTop = terminalContent.value.scrollHeight;
   }
-}
+};
 
 const handleKeydown = (event: KeyboardEvent) => {
   switch (event.key) {
-    case 'Enter':
-      event.preventDefault()
-      advanceMessage()
-      break
-    case 'Tab':
-      event.preventDefault()
-      // Complete current message instantly by skipping to end
-      if (currentMessageIndex.value < props.conversationData.messages.length - 1) {
-        // Force complete current animation and advance
-        advanceMessage()
+    case "Enter":
+      event.preventDefault();
+      if (conversationState.value === 'user_typing') {
+        submitUserMessage();
       }
-      break
-    case 'Escape':
-      event.preventDefault()
-      restart()
-      break
-    case ' ':
-      event.preventDefault()
-      togglePlayback()
-      break
+      break;
+    case "Tab":
+      event.preventDefault();
+      if (conversationState.value === 'waiting_for_user') {
+        completeUserMessage();
+      }
+      break;
+    case "Escape":
+      event.preventDefault();
+      restart();
+      break;
+    case " ":
+      event.preventDefault();
+      togglePlayback();
+      break;
   }
-}
+};
 
 const getMessagePrefix = (type: string): string => {
   switch (type) {
-    case 'human': return '> '
-    case 'agent': return '< '
-    case 'tool_call': return '! '
-    case 'system': return '# '
-    default: return '? '
+    case "human":
+      return "> ";
+    case "agent":
+      return "< ";
+    case "tool_call":
+      return "! ";
+    case "system":
+      return "# ";
+    default:
+      return "? ";
   }
-}
+};
 
 const formatDate = (timestamp: string): string => {
-  return new Date(timestamp).toLocaleString()
-}
+  return new Date(timestamp).toLocaleString();
+};
+
+// Watch for conversation data changes and initialize
+watch(() => props.conversationData, () => {
+  initializeConversation();
+}, { immediate: true });
 
 // Cursor blinking animation
-let cursorInterval: number
+let cursorInterval: number;
 onMounted(() => {
   cursorInterval = setInterval(() => {
-    showCursor.value = !showCursor.value
-  }, 530)
-  
-  document.addEventListener('keydown', handleKeydown)
-})
+    showCursor.value = !showCursor.value;
+  }, 530);
+
+  document.addEventListener("keydown", handleKeydown);
+});
 
 onUnmounted(() => {
-  clearInterval(cursorInterval)
-  document.removeEventListener('keydown', handleKeydown)
-})
+  clearInterval(cursorInterval);
+  document.removeEventListener("keydown", handleKeydown);
+});
 </script>
 
 <style scoped>
@@ -380,6 +474,9 @@ onUnmounted(() => {
 .terminal-cursor {
   color: var(--terminal-cursor);
   animation: blink 1s infinite;
+}
+
+.cursor-line {
   margin-top: var(--spacing-1);
 }
 
@@ -388,6 +485,42 @@ onUnmounted(() => {
   font-style: italic;
   color: var(--terminal-dim);
   margin-top: var(--spacing-2);
+  display: flex;
+  align-items: baseline;
+}
+
+.ghost-preview .terminal-cursor {
+  opacity: 1;
+  color: var(--terminal-cursor);
+}
+
+.ghost-content {
+  display: inline;
+}
+
+.ghost-text {
+  opacity: 0.3;
+}
+
+.completed-message {
+  color: var(--terminal-text);
+  margin-top: var(--spacing-2);
+  display: flex;
+  align-items: baseline;
+  white-space: pre-wrap;
+}
+
+.completed-message .ghost-prefix {
+  color: var(--terminal-accent);
+  font-weight: bold;
+}
+
+.completed-message .message-content {
+  color: var(--terminal-text);
+}
+
+.completed-message .terminal-cursor {
+  color: var(--terminal-cursor);
 }
 
 .ghost-prefix {
@@ -408,7 +541,13 @@ onUnmounted(() => {
 }
 
 @keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
 }
 </style>
