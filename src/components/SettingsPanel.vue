@@ -23,7 +23,7 @@
           <input
             id="agent-speed"
             type="range"
-            min="10"
+            min="1"
             max="200"
             :value="settings.agentAnimationSpeed"
             @input="updateSetting('agentAnimationSpeed', Number($event.target.value))"

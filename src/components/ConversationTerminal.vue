@@ -110,6 +110,14 @@ const advanceMessage = () => {
   if (currentMessageIndex.value < props.conversationData.messages.length - 1) {
     currentMessageIndex.value++
     scrollToBottom()
+    
+    // After advancing, check if we should continue auto-advancing
+    const currentMessage = props.conversationData.messages[currentMessageIndex.value]
+    const nextMessage = props.conversationData.messages[currentMessageIndex.value + 1]
+    
+    // If current message is not human and next message exists and is also not human,
+    // we'll let onMessageComplete handle the auto-advance
+    // This ensures consecutive agent messages flow smoothly
   }
 }
 
@@ -119,7 +127,17 @@ const restart = () => {
 }
 
 const onMessageComplete = () => {
-  if (isPlaying.value) {
+  const currentMessage = props.conversationData.messages[currentMessageIndex.value]
+  const nextMessage = props.conversationData.messages[currentMessageIndex.value + 1]
+  
+  // Auto-advance if:
+  // 1. We're in auto-play mode, OR
+  // 2. Current message is agent/system/tool_call AND next message is also agent/system/tool_call
+  const shouldAutoAdvance = isPlaying.value || 
+    (currentMessage && nextMessage && 
+     currentMessage.type !== 'human' && nextMessage.type !== 'human')
+  
+  if (shouldAutoAdvance) {
     setTimeout(() => {
       advanceMessage()
     }, 1000) // Brief pause between messages
