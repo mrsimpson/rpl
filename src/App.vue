@@ -77,6 +77,9 @@
       </div>
       </footer>
     </main>
+
+    <!-- Hackathon Badge -->
+    <HackathonBadge />
   </div>
 </template>
 
@@ -87,6 +90,7 @@ import { SettingsIcon, SunIcon, MoonIcon } from "lucide-vue-next";
 import SourceInput from "./components/SourceInput.vue";
 import SettingsPanel from "./components/SettingsPanel.vue";
 import ConversationTerminal from "./components/ConversationTerminal.vue";
+import HackathonBadge from "./components/HackathonBadge.vue";
 import { TextFormatParser } from "./parsers/TextFormatParser";
 import { JsonFormatParser } from "./parsers/JsonFormatParser";
 import { FileSourceAdapter } from "./adapters/FileSourceAdapter";
