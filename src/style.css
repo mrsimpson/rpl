@@ -546,6 +546,7 @@ body {
   justify-content: center;
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
+  align-items: center;
 }
 
 .instructions kbd {
