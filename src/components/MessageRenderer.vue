@@ -63,10 +63,6 @@ const getAnimationSpeed = () => {
     ? props.settings.humanAnimationSpeed
     : props.settings.agentAnimationSpeed;
 };
-
-const formatTime = (timestamp: string): string => {
-  return new Date(timestamp).toLocaleTimeString();
-};
 </script>
 
 <style scoped>

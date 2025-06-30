@@ -53,12 +53,12 @@ const getDiffLines = (): string[] => {
   const diff: string[] = []
   
   // Add removed lines (prefixed with -)
-  oldLines.forEach(line => {
+  oldLines.forEach((line: string) => {
     diff.push(`- ${line}`)
   })
   
   // Add added lines (prefixed with +)
-  newLines.forEach(line => {
+  newLines.forEach((line: string) => {
     diff.push(`+ ${line}`)
   })
   

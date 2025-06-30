@@ -13,7 +13,7 @@
             min="10"
             max="200"
             :value="settings.humanAnimationSpeed"
-            @input="updateSetting('humanAnimationSpeed', Number($event.target.value))"
+            @input="updateSetting('humanAnimationSpeed', Number(($event.target as HTMLInputElement).value))"
           />
           <span>{{ settings.humanAnimationSpeed }}ms</span>
         </div>
@@ -26,7 +26,7 @@
             min="1"
             max="200"
             :value="settings.agentAnimationSpeed"
-            @input="updateSetting('agentAnimationSpeed', Number($event.target.value))"
+            @input="updateSetting('agentAnimationSpeed', Number(($event.target as HTMLInputElement).value))"
           />
           <span>{{ settings.agentAnimationSpeed }}ms</span>
         </div>
@@ -35,7 +35,7 @@
 
     <div class="setting-group">
       <label>Terminal Theme</label>
-      <select :value="settings.theme" @change="updateSetting('theme', $event.target.value)">
+      <select :value="settings.theme" @change="updateSetting('theme', ($event.target as HTMLSelectElement).value)">
         <option value="matrix">Matrix Green</option>
         <option value="amber">Amber Monochrome</option>
         <option value="blue">Blue Terminal</option>
@@ -46,7 +46,7 @@
 
     <div class="setting-group">
       <label>Window Style</label>
-      <select :value="settings.windowStyle" @change="updateSetting('windowStyle', $event.target.value)">
+      <select :value="settings.windowStyle" @change="updateSetting('windowStyle', ($event.target as HTMLSelectElement).value)">
         <option value="macos">macOS</option>
         <option value="linux">Linux</option>
         <option value="windows">Windows</option>
@@ -60,7 +60,7 @@
           <input
             type="checkbox"
             :checked="settings.showProgress"
-            @change="updateSetting('showProgress', $event.target.checked)"
+            @change="updateSetting('showProgress', ($event.target as HTMLInputElement).checked)"
           />
           <span>Show progress indicators</span>
         </label>
@@ -69,7 +69,7 @@
           <input
             type="checkbox"
             :checked="settings.showGhostPreview"
-            @change="updateSetting('showGhostPreview', $event.target.checked)"
+            @change="updateSetting('showGhostPreview', ($event.target as HTMLInputElement).checked)"
           />
           <span>Ghost preview of next message</span>
         </label>
@@ -78,7 +78,7 @@
           <input
             type="checkbox"
             :checked="settings.enableSounds"
-            @change="updateSetting('enableSounds', $event.target.checked)"
+            @change="updateSetting('enableSounds', ($event.target as HTMLInputElement).checked)"
           />
           <span>Enable typing sounds</span>
         </label>
@@ -96,7 +96,7 @@
 <script setup lang="ts">
 import type { Settings } from '../types'
 
-const props = defineProps<{
+defineProps<{
   settings: Settings
 }>()
 

@@ -97,6 +97,7 @@ defineEmits<{
 const terminalContent = ref<HTMLElement>();
 const currentMessageIndex = ref(-1);
 const showCursor = ref(true);
+const isPlaying = ref(false);
 
 // State machine for conversation flow
 type ConversationState = 'waiting_for_user' | 'user_typing' | 'agent_typing';
@@ -135,7 +136,7 @@ const cursorAtStart = computed(() =>
 
 
 const togglePlayback = () => {
-  // For now, keep simple - can be enhanced later
+  isPlaying.value = !isPlaying.value;
   console.log('Toggle playback - state machine handles flow');
 };
 
