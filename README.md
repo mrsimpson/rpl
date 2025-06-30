@@ -32,6 +32,30 @@ A Vue.js application for replaying LLM conversations with an interactive termina
 - **Settings persistence** via localStorage
 - **Responsive design** for mobile, tablet, and desktop
 
+## 🔗 URL-Based Loading
+
+The application supports direct conversation loading via URL parameters:
+
+### URL Format
+```
+http://localhost:5173/conversation?url=<conversation-url>
+```
+
+### Examples
+```bash
+# Load from GitHub Gist
+http://localhost:5173/conversation?url=https://gist.githubusercontent.com/user/gist-id/raw/file.json
+
+# Load from any accessible URL
+http://localhost:5173/conversation?url=https://example.com/conversation.txt
+```
+
+### Behavior
+- **Auto-loading**: Conversations load automatically when URL parameter is provided
+- **Error handling**: Invalid URLs show error message and redirect to home after 3 seconds
+- **Format detection**: Automatically detects JSON or text format
+- **Loading states**: Shows loading spinner during fetch operations
+
 ## 🚀 Quick Start
 
 ### Prerequisites

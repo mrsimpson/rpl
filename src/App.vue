@@ -4,10 +4,29 @@
 
       <div class="content-area">
         <section class="conversation-area">
-          <div v-if="!conversationData" class="source-input">
+          <!-- Loading state -->
+          <div v-if="loading" class="loading-container">
+            <div class="loading-message">
+              <div class="spinner"></div>
+              <p>Loading conversation...</p>
+            </div>
+          </div>
+
+          <!-- Error state -->
+          <div v-else-if="error" class="error-container">
+            <div class="error-message">
+              <h3>Error Loading Conversation</h3>
+              <p>{{ error }}</p>
+              <p class="redirect-message">Redirecting to home in a few seconds...</p>
+            </div>
+          </div>
+
+          <!-- Source input (home state) -->
+          <div v-else-if="!conversationData" class="source-input">
             <SourceInput @load-conversation="loadConversation" />
           </div>
 
+          <!-- Conversation terminal -->
           <div v-else class="terminal-container">
             <ConversationTerminal
               :conversation-data="conversationData"
@@ -62,16 +81,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, onMounted, watch, computed } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { SettingsIcon, SunIcon, MoonIcon } from "lucide-vue-next";
 import SourceInput from "./components/SourceInput.vue";
 import SettingsPanel from "./components/SettingsPanel.vue";
 import ConversationTerminal from "./components/ConversationTerminal.vue";
+import { TextFormatParser } from "./parsers/TextFormatParser";
+import { JsonFormatParser } from "./parsers/JsonFormatParser";
+import { FileSourceAdapter } from "./adapters/FileSourceAdapter";
+import { GistSourceAdapter } from "./adapters/GistSourceAdapter";
 import type { ConversationData, Settings } from "./types";
+
+const route = useRoute();
+const router = useRouter();
 
 const isDarkMode = ref(true);
 const showSettings = ref(false);
 const conversationData = ref<ConversationData | null>(null);
+const loading = ref(false);
+const error = ref("");
 
 const settings = reactive<Settings>({
   humanAnimationSpeed: 50,
@@ -82,6 +111,9 @@ const settings = reactive<Settings>({
   showGhostPreview: true,
   enableSounds: false,
 });
+
+// Computed property to get conversation URL from route
+const conversationUrl = computed(() => route.query.url as string);
 
 const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value;
@@ -104,11 +136,74 @@ const updateSettings = (newSettings: Partial<Settings>) => {
 const loadConversation = (data: ConversationData) => {
   conversationData.value = data;
   showSettings.value = false;
+  error.value = "";
 };
 
 const resetConversation = () => {
   conversationData.value = null;
+  error.value = "";
+  // Navigate to home route
+  router.push('/');
 };
+
+const loadConversationFromUrl = async (url: string) => {
+  if (!url) return;
+
+  loading.value = true;
+  error.value = "";
+
+  try {
+    // Determine source adapter
+    const adapter = url.includes('gist.github.com')
+      ? new GistSourceAdapter()
+      : new FileSourceAdapter();
+
+    // Fetch content
+    const content = await adapter.fetchContent(url);
+
+    // Auto-detect format
+    const parser = detectFormat(content) === 'json'
+      ? new JsonFormatParser()
+      : new TextFormatParser();
+
+    const data = await parser.parse(content);
+    loadConversation(data);
+
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to load conversation';
+    // Redirect to home on error
+    setTimeout(() => {
+      router.push('/');
+    }, 3000);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const detectFormat = (content: string): 'json' | 'text' => {
+  try {
+    JSON.parse(content);
+    return 'json';
+  } catch {
+    return 'text';
+  }
+};
+
+// Watch for route changes to load conversation from URL
+watch(conversationUrl, (newUrl) => {
+  if (newUrl && route.name === 'Conversation') {
+    loadConversationFromUrl(newUrl);
+  }
+}, { immediate: true });
+
+// Watch for route changes to reset state when going to home
+watch(() => route.name, (newRouteName) => {
+  if (newRouteName === 'Home') {
+    conversationData.value = null;
+    error.value = "";
+    loading.value = false;
+  }
+});
 
 onMounted(() => {
   // Load saved preferences
@@ -121,14 +216,6 @@ onMounted(() => {
   if (savedSettings) {
     Object.assign(settings, JSON.parse(savedSettings));
   }
-
-  // Check for URL parameters
-  const urlParams = new URLSearchParams(window.location.search);
-  const sourceUrl = urlParams.get("source");
-  if (sourceUrl) {
-    // Auto-load from URL parameter
-    console.log("Auto-loading from URL:", sourceUrl);
-  }
 });
 </script>
 
@@ -136,6 +223,63 @@ onMounted(() => {
 .icon {
   width: 16px;
   height: 16px;
+}
+
+/* Loading state */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+}
+
+.loading-message {
+  text-align: center;
+  color: var(--color-text-primary);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--color-border);
+  border-top: 4px solid var(--color-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error state */
+.error-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+}
+
+.error-message {
+  text-align: center;
+  color: var(--color-text-primary);
+  max-width: 500px;
+  padding: 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background-color: var(--color-bg-secondary);
+}
+
+.error-message h3 {
+  color: #ff6b6b;
+  margin-bottom: 1rem;
+}
+
+.redirect-message {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin-top: 1rem;
 }
 
 .conversation-area {

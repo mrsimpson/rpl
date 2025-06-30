@@ -237,7 +237,7 @@ The terminal uses a finite state machine to manage conversation flow:
 - ESC: Any state → `waiting_for_user` (restart)
 
 ### Settings Management
-
+o
 Settings are managed at the App level and persisted to localStorage:
 
 ```typescript

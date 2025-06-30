@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "responsible-vibe-mcp": {
+      "command": "node",
+      "args": [
+        "/Users/oliverjaegle/projects/privat/mcp-server/responsible-vibe/dist/index.js"
+      ]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ]
+    },
+    "slidev Docs": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://gitmcp.io/slidevjs/slidev"
+      ]
+    }
+  }
+}
