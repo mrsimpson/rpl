@@ -1,8 +1,8 @@
 import type { FormatParser, ConversationData, Message } from '../types'
 
 export class TextFormatParser implements FormatParser {
-  // Pattern to detect user messages: > or [prefix] > at start of line (with optional space)
-  private readonly USER_MESSAGE_PATTERN = /^(\[.*?\]\s*)?>\s*/
+  // Pattern to detect user messages: > or [prefix] > at start of line (with optional space and special chars)
+  private readonly USER_MESSAGE_PATTERN = /^(\[.*?\]\s*[!]?\s*)?>\s*/
 
   async parse(content: string): Promise<ConversationData> {
     const lines = content.split('\n')
@@ -16,7 +16,7 @@ export class TextFormatParser implements FormatParser {
       
       if (userMatch) {
         // Save previous message if exists
-        if (currentMessage?.content) {
+        if (currentMessage) {
           messages.push(this.finalizeMessage(currentMessage, ++messageCounter))
         }
         
@@ -30,7 +30,7 @@ export class TextFormatParser implements FormatParser {
       }
       // Check for empty line (message delimiter)
       else if (line.trim() === '') {
-        if (currentMessage?.content) {
+        if (currentMessage) {
           messages.push(this.finalizeMessage(currentMessage, ++messageCounter))
           currentMessage = null
         }
@@ -52,7 +52,7 @@ export class TextFormatParser implements FormatParser {
     }
     
     // Don't forget the last message
-    if (currentMessage?.content) {
+    if (currentMessage) {
       messages.push(this.finalizeMessage(currentMessage, ++messageCounter))
     }
 
