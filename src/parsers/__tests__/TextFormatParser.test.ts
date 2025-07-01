@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { TextFormatParser } from '../TextFormatParser'
-import type { ConversationData } from '../../types'
 
 describe('TextFormatParser', () => {
   const parser = new TextFormatParser()
