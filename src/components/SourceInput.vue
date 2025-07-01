@@ -66,6 +66,12 @@
       />
     </div>
   </div>
+
+  <!-- Toast notification for text format parsing -->
+  <ToastNotification 
+    v-if="showTextFormatToast" 
+    @dismissed="showTextFormatToast = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -75,6 +81,7 @@ import { TextFormatParser } from '../parsers/TextFormatParser'
 import { JsonFormatParser } from '../parsers/JsonFormatParser'
 import { FileSourceAdapter } from '../adapters/FileSourceAdapter'
 import { GistSourceAdapter } from '../adapters/GistSourceAdapter'
+import ToastNotification from './ToastNotification.vue'
 import type { ConversationData } from '../types'
 
 const emit = defineEmits<{
@@ -85,6 +92,7 @@ const sourceUrl = ref('')
 const selectedFormat = ref('auto')
 const loading = ref(false)
 const error = ref('')
+const showTextFormatToast = ref(false)
 
 const loadSource = async () => {
   if (!sourceUrl.value) return
@@ -102,6 +110,9 @@ const loadSource = async () => {
     const content = await adapter.fetchContent(sourceUrl.value)
 
     // Parse content
+    const isTextFormat = selectedFormat.value === 'text' || 
+      (selectedFormat.value === 'auto' && detectFormat(content) !== 'json')
+    
     const parser = selectedFormat.value === 'json' 
       ? new JsonFormatParser()
       : selectedFormat.value === 'text'
@@ -111,6 +122,12 @@ const loadSource = async () => {
       : new TextFormatParser()
 
     const conversationData = await parser.parse(content)
+    
+    // Show toast notification for text format parsing
+    if (isTextFormat) {
+      showTextFormatToast.value = true
+    }
+    
     emit('loadConversation', conversationData)
 
   } catch (err) {

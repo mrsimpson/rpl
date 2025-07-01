@@ -1,61 +1,56 @@
 import type { FormatParser, ConversationData, Message } from '../types'
 
 export class TextFormatParser implements FormatParser {
+  // Pattern to detect user messages: > or [prefix] > at start of line (with optional space)
+  private readonly USER_MESSAGE_PATTERN = /^(\[.*?\]\s*)?>\s*/
+
   async parse(content: string): Promise<ConversationData> {
     const lines = content.split('\n')
     const messages: Message[] = []
     let currentMessage: Partial<Message> | null = null
     let messageCounter = 0
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
+    for (const line of lines) {
+      // Check if line starts a new user message
+      const userMatch = line.match(this.USER_MESSAGE_PATTERN)
       
-      // Detect start of new user message (lines starting with > followed by space)
-      if (line.startsWith('> ')) {
+      if (userMatch) {
         // Save previous message if exists
         if (currentMessage?.content) {
           messages.push(this.finalizeMessage(currentMessage, ++messageCounter))
         }
         
-        // Start new human message (remove the "> " prefix)
+        // Start new user message (remove prefix)
+        const content = line.replace(this.USER_MESSAGE_PATTERN, '').trim()
         currentMessage = {
           type: 'human',
-          content: line.substring(2).trim(),
+          content: content,
           timestamp: new Date().toISOString()
         }
       }
-      // Detect empty line (end of current message)
+      // Check for empty line (message delimiter)
       else if (line.trim() === '') {
         if (currentMessage?.content) {
           messages.push(this.finalizeMessage(currentMessage, ++messageCounter))
           currentMessage = null
         }
       }
-      // Detect agent response (after user message or standalone)
-      else if (line.trim() && !currentMessage) {
-        // This is likely an agent response
-        currentMessage = {
-          type: 'agent',
-          content: line.trim(),
-          timestamp: new Date().toISOString()
-        }
-      }
-      // Continue building current message content
-      else if (line.trim() && currentMessage) {
-        if (currentMessage.type === 'human') {
-          // Multi-line user input (continue without the "> " prefix)
-          if (line.startsWith('> ')) {
-            currentMessage.content += '\n' + line.substring(2).trim()
-          } else {
-            currentMessage.content += '\n' + line.trim()
-          }
-        } else {
-          // Multi-line agent response
+      // Handle continuation lines or agent messages
+      else if (line.trim()) {
+        if (currentMessage) {
+          // Continue current message (user or agent)
           currentMessage.content += '\n' + line.trim()
+        } else {
+          // Start new agent message
+          currentMessage = {
+            type: 'agent',
+            content: line.trim(),
+            timestamp: new Date().toISOString()
+          }
         }
       }
     }
-
+    
     // Don't forget the last message
     if (currentMessage?.content) {
       messages.push(this.finalizeMessage(currentMessage, ++messageCounter))
@@ -63,7 +58,7 @@ export class TextFormatParser implements FormatParser {
 
     return {
       metadata: {
-        title: 'Shell Format Conversation',
+        title: 'Text Format Conversation',
         timestamp: new Date().toISOString(),
         format: 'text'
       },
