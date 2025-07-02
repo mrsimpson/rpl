@@ -1,0 +1,66 @@
+name: "Feature Enhancement"
+description: "Structured workflow for adding new features to existing applications"
+
+phases:
+  requirements:
+    name: "Requirements Analysis"
+    description: "Analyze and document the feature requirements"
+    tasks:
+      - "Understand the current implementation"
+      - "Define the new feature requirements"
+      - "Identify affected components"
+      - "Document acceptance criteria"
+    
+  design:
+    name: "Technical Design"
+    description: "Design the technical solution"
+    tasks:
+      - "Design the scroll detection mechanism"
+      - "Plan the pause/resume state management"
+      - "Define component interfaces"
+      - "Consider edge cases and error handling"
+    
+  implementation:
+    name: "Implementation"
+    description: "Implement the feature"
+    tasks:
+      - "Add scroll event listeners"
+      - "Implement pause/resume logic"
+      - "Update UI components"
+      - "Add visual feedback for pause state"
+    
+  testing:
+    name: "Testing & Validation"
+    description: "Test the implementation"
+    tasks:
+      - "Test scroll-based pause functionality"
+      - "Test resume on scroll to bottom"
+      - "Verify existing functionality still works"
+      - "Test edge cases"
+    
+  documentation:
+    name: "Documentation"
+    description: "Update documentation"
+    tasks:
+      - "Update README with new controls"
+      - "Document the new feature"
+      - "Add code comments"
+
+transitions:
+  - from: "requirements"
+    to: "design"
+    condition: "Requirements are clearly defined and documented"
+    
+  - from: "design"
+    to: "implementation"
+    condition: "Technical design is complete and approved"
+    
+  - from: "implementation"
+    to: "testing"
+    condition: "Feature implementation is complete"
+    
+  - from: "testing"
+    to: "documentation"
+    condition: "All tests pass and feature works as expected"
+
+initial_phase: "requirements"

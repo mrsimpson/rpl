@@ -13,7 +13,7 @@
   --font-size-lg: 16px;
   --font-size-xl: 18px;
   --font-size-2xl: 24px;
-  
+
   --spacing-1: 8px;
   --spacing-2: 16px;
   --spacing-3: 24px;
@@ -28,20 +28,20 @@
   --color-text-primary: #212529;
   --color-text-secondary: #6c757d;
   --color-text-accent: #495057;
-  
+
   /* Terminal Colors - Matrix Theme */
   --terminal-bg: #0d1117;
   --terminal-text: #00ff41;
   --terminal-accent: #00cc33;
   --terminal-dim: #008822;
   --terminal-cursor: #00ff41;
-  
+
   /* Status Colors */
   --color-success: #28a745;
   --color-warning: #ffc107;
   --color-error: #dc3545;
   --color-info: #17a2b8;
-  
+
   /* Interactive Elements */
   --color-border: #dee2e6;
   --color-border-focus: #80bdff;
@@ -196,7 +196,7 @@ body {
   margin-bottom: var(--spacing-4);
 }
 
-.setting-group > label {
+.setting-group>label {
   display: block;
   margin-bottom: var(--spacing-1);
   font-weight: 500;
@@ -333,7 +333,7 @@ body {
   text-align: left;
 }
 
-.format-selection > label {
+.format-selection>label {
   display: block;
   margin-bottom: var(--spacing-1);
   font-weight: 500;
@@ -513,6 +513,9 @@ body {
     text-align: center;
   }
 
+    .app-footer {
+      padding: 0px;
+    }
   .header-controls {
     justify-content: center;
   }
@@ -536,7 +539,7 @@ body {
   }
 
   .instructions {
-    flex-direction: column;
+    flex-direction: row;
     gap: var(--spacing-1);
     text-align: center;
   }
@@ -552,7 +555,7 @@ body {
   .settings-panel {
     width: 250px;
   }
-  
+
   .source-form {
     max-width: 500px;
   }
