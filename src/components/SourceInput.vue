@@ -76,6 +76,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { LoaderIcon, DownloadIcon, PlayIcon } from 'lucide-vue-next'
 import { TextFormatParser } from '../parsers/TextFormatParser'
 import { JsonFormatParser } from '../parsers/JsonFormatParser'
@@ -83,6 +84,8 @@ import { FileSourceAdapter } from '../adapters/FileSourceAdapter'
 import { GistSourceAdapter } from '../adapters/GistSourceAdapter'
 import ToastNotification from './ToastNotification.vue'
 import type { ConversationData } from '../types'
+
+const router = useRouter()
 
 const emit = defineEmits<{
   loadConversation: [data: ConversationData]
@@ -97,44 +100,8 @@ const showTextFormatToast = ref(false)
 const loadSource = async () => {
   if (!sourceUrl.value) return
 
-  loading.value = true
-  error.value = ''
-
-  try {
-    // Determine source adapter
-    const adapter = sourceUrl.value.includes('gist.github.com')
-      ? new GistSourceAdapter()
-      : new FileSourceAdapter()
-
-    // Fetch content
-    const content = await adapter.fetchContent(sourceUrl.value)
-
-    // Parse content
-    const isTextFormat = selectedFormat.value === 'text' || 
-      (selectedFormat.value === 'auto' && detectFormat(content) !== 'json')
-    
-    const parser = selectedFormat.value === 'json' 
-      ? new JsonFormatParser()
-      : selectedFormat.value === 'text'
-      ? new TextFormatParser()
-      : detectFormat(content) === 'json'
-      ? new JsonFormatParser()
-      : new TextFormatParser()
-
-    const conversationData = await parser.parse(content)
-    
-    // Show toast notification for text format parsing
-    if (isTextFormat) {
-      showTextFormatToast.value = true
-    }
-    
-    emit('loadConversation', conversationData)
-
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load conversation'
-  } finally {
-    loading.value = false
-  }
+  // Navigate to conversation route with URL parameter
+  router.push(`/conversation?url=${encodeURIComponent(sourceUrl.value)}`)
 }
 
 const handleFileUpload = async (event: Event) => {
@@ -162,48 +129,8 @@ const handleFileUpload = async (event: Event) => {
 }
 
 const loadDemo = () => {
-  // Create a demo conversation
-  const demoData: ConversationData = {
-    metadata: {
-      title: 'Demo Conversation',
-      timestamp: new Date().toISOString(),
-      format: 'demo'
-    },
-    messages: [
-      {
-        id: '1',
-        type: 'human',
-        content: 'Hello! Can you help me understand how neural networks work?',
-        timestamp: new Date().toISOString()
-      },
-      {
-        id: '2',
-        type: 'agent',
-        content: 'I\'d be happy to explain neural networks! Neural networks are computational models inspired by biological neural networks. They consist of interconnected nodes (neurons) organized in layers.',
-        timestamp: new Date().toISOString()
-      },
-      {
-        id: '3',
-        type: 'tool_call',
-        content: 'generate_diagram(type="neural_network", layers=3)',
-        timestamp: new Date().toISOString()
-      },
-      {
-        id: '4',
-        type: 'human', 
-        content: 'That\'s helpful! How do they learn from data?',
-        timestamp: new Date().toISOString()
-      },
-      {
-        id: '5',
-        type: 'agent',
-        content: 'Neural networks learn through a process called backpropagation. During training, the network makes predictions, compares them to expected outputs, and adjusts weights to minimize errors.',
-        timestamp: new Date().toISOString()
-      }
-    ]
-  }
-  
-  emit('loadConversation', demoData)
+  // Navigate to conversation route with demo parameter
+  router.push('/conversation?url=demo')
 }
 
 const detectFormat = (content: string): 'json' | 'text' => {

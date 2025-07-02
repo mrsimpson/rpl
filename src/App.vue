@@ -157,6 +157,51 @@ const loadConversationFromUrl = async (url: string) => {
   error.value = "";
 
   try {
+    // Handle special demo URL
+    if (url === 'demo') {
+      const demoData: ConversationData = {
+        metadata: {
+          title: 'Demo Conversation',
+          timestamp: new Date().toISOString(),
+          format: 'demo'
+        },
+        messages: [
+          {
+            id: '1',
+            type: 'human',
+            content: 'Hello! Can you help me understand how neural networks work?',
+            timestamp: new Date().toISOString()
+          },
+          {
+            id: '2',
+            type: 'agent',
+            content: 'I\'d be happy to explain neural networks! Neural networks are computational models inspired by biological neural networks. They consist of interconnected nodes (neurons) organized in layers.',
+            timestamp: new Date().toISOString()
+          },
+          {
+            id: '3',
+            type: 'tool_call',
+            content: 'generate_diagram(type="neural_network", layers=3)',
+            timestamp: new Date().toISOString()
+          },
+          {
+            id: '4',
+            type: 'human', 
+            content: 'That\'s helpful! How do they learn from data?',
+            timestamp: new Date().toISOString()
+          },
+          {
+            id: '5',
+            type: 'agent',
+            content: 'Neural networks learn through a process called backpropagation. During training, the network makes predictions, compares them to expected outputs, and adjusts weights to minimize errors.',
+            timestamp: new Date().toISOString()
+          }
+        ]
+      };
+      loadConversation(demoData);
+      return;
+    }
+
     // Determine source adapter
     const adapter = url.includes('gist.github.com')
       ? new GistSourceAdapter()
