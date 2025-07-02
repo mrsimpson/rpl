@@ -40,13 +40,17 @@
           </div>
         </div>
 
-        <div class="messages-container">
+        <div class="messages-container" ref="messagesContainer">
           <MessageRenderer
             v-for="(message, index) in visibleMessages"
             :key="message.id"
             :message="message"
-            :is-current="index === currentMessageIndex && conversationState === 'agent_typing' && message.type !== 'human'"
+            :is-current="index === currentMessageIndex && (
+              (conversationState === 'agent_typing' && message.type !== 'human') ||
+              (conversationState === 'user_typing' && message.type === 'human')
+            )"
             :settings="settings"
+            :paused="!isPlaying"
             @animation-complete="onMessageComplete"
           />
 
@@ -95,6 +99,7 @@ defineEmits<{
 }>();
 
 const terminalContent = ref<HTMLElement>();
+const messagesContainer = ref<HTMLElement>();
 const currentMessageIndex = ref(-1);
 const showCursor = ref(true);
 const isPlaying = ref(false);
@@ -137,7 +142,36 @@ const cursorAtStart = computed(() =>
 
 const togglePlayback = () => {
   isPlaying.value = !isPlaying.value;
-  console.log('Toggle playback - state machine handles flow');
+  console.log('Toggle playback - isPlaying:', isPlaying.value);
+  
+  if (isPlaying.value) {
+    // Play pressed - scroll to bottom and start/continue playback
+    scrollToBottom();
+    startPlaybackUntilNextUser();
+  }
+  // If pausing, the paused prop change will pause the animation
+};
+
+const startPlaybackUntilNextUser = () => {
+  if (conversationState.value === 'waiting_for_user') {
+    // Start the next message
+    const nextMsg = props.conversationData.messages[currentMessageIndex.value + 1];
+    if (nextMsg) {
+      if (nextMsg.type === 'human') {
+        // Next message is user message - start typing it
+        currentMessageIndex.value++;
+        conversationState.value = 'user_typing';
+        scrollToBottom();
+      } else {
+        // Next message is agent/tool - start agent sequence
+        processAgentMessages();
+      }
+    }
+  } else if (conversationState.value === 'agent_typing' || conversationState.value === 'user_typing') {
+    // Already in a typing state - the paused prop change will resume the current animation
+    // The playback flow will continue after this message completes
+  }
+  // The paused prop change will resume any active typing animation
 };
 
 
@@ -153,6 +187,9 @@ const submitUserMessage = () => {
     currentMessageIndex.value++;
     conversationState.value = 'agent_typing';
     
+    // Set playing to true and start play-until-next-user behavior
+    isPlaying.value = true;
+    
     // Start agent response sequence
     setTimeout(() => {
       processAgentMessages();
@@ -164,16 +201,24 @@ const processAgentMessages = () => {
   const nextMsg = props.conversationData.messages[currentMessageIndex.value + 1];
   
   if (nextMsg && nextMsg.type !== 'human') {
-    // Show next agent message
+    // Show next non-human message
     currentMessageIndex.value++;
+    conversationState.value = 'agent_typing';
     scrollToBottom();
     
-    // Continue with next agent message after delay
-    setTimeout(() => {
-      processAgentMessages();
-    }, 1500); // Longer delay to see each message
+    // If it's a tool_call, continue immediately since it doesn't animate
+    if (nextMsg.type === 'tool_call') {
+      setTimeout(() => {
+        if (isPlaying.value) {
+          continuePlayback();
+        } else {
+          conversationState.value = 'waiting_for_user';
+        }
+      }, 1000); // Brief delay to show the tool call
+    }
+    // For agent messages, onMessageComplete will handle continuation when animation finishes
   } else {
-    // No more agent messages, wait for next user input
+    // No more agent messages, or next is human message
     conversationState.value = 'waiting_for_user';
   }
 };
@@ -205,10 +250,48 @@ const initializeConversation = () => {
 };
 
 const onMessageComplete = () => {
-  // In agent_typing state, continue processing agent messages
+  console.log('Message animation complete, state:', conversationState.value, 'isPlaying:', isPlaying.value);
+  
   if (conversationState.value === 'agent_typing') {
-    // The processAgentMessages function handles the timing and continuation
-    // This event just confirms the current message finished animating
+    if (isPlaying.value) {
+      // Continue to next message if playing
+      setTimeout(() => {
+        continuePlayback();
+      }, 1000);
+    } else {
+      // If paused, wait for user interaction
+      conversationState.value = 'waiting_for_user';
+    }
+  } else if (conversationState.value === 'user_typing') {
+    // User message completed - continue playback if playing
+    if (isPlaying.value) {
+      setTimeout(() => {
+        continuePlayback();
+      }, 1000);
+    } else {
+      conversationState.value = 'waiting_for_user';
+    }
+  }
+};
+
+const continuePlayback = () => {
+  const nextMsg = props.conversationData.messages[currentMessageIndex.value + 1];
+  
+  if (nextMsg) {
+    if (nextMsg.type === 'human') {
+      // Next is user message - don't advance index, go back to waiting state
+      // This will show the ghost preview and wait for Tab or Play
+      conversationState.value = 'waiting_for_user';
+      isPlaying.value = false; // Auto-pause when reaching user message
+      console.log('Reached user message - showing ghost preview, waiting for Tab or Play');
+    } else {
+      // Next is agent/tool message - continue
+      processAgentMessages();
+    }
+  } else {
+    // No more messages
+    conversationState.value = 'waiting_for_user';
+    isPlaying.value = false;
   }
 };
 
@@ -268,6 +351,41 @@ watch(() => props.conversationData, () => {
   initializeConversation();
 }, { immediate: true });
 
+// Scroll-to-pause functionality
+let lastScrollTop = 0;
+let scrollTimeout: number | null = null;
+
+const handleScroll = () => {
+  if (!terminalContent.value || !isPlaying.value) return;
+  
+  const container = terminalContent.value;
+  const currentScrollTop = container.scrollTop;
+  const scrollHeight = container.scrollHeight;
+  const clientHeight = container.clientHeight;
+  
+  // Check if user scrolled up (away from bottom)
+  const isScrollingUp = currentScrollTop < lastScrollTop;
+  const isNearBottom = (scrollHeight - currentScrollTop - clientHeight) < 50; // 50px threshold
+  
+  if (isScrollingUp && !isNearBottom) {
+    // User scrolled up during playback - auto-pause
+    isPlaying.value = false;
+    console.log('Auto-paused due to scroll up');
+  }
+  
+  lastScrollTop = currentScrollTop;
+  
+  // Clear any existing timeout
+  if (scrollTimeout) {
+    clearTimeout(scrollTimeout);
+  }
+  
+  // Update last scroll position after a brief delay
+  scrollTimeout = setTimeout(() => {
+    lastScrollTop = currentScrollTop;
+  }, 100);
+};
+
 // Cursor blinking animation
 let cursorInterval: number;
 onMounted(() => {
@@ -276,11 +394,26 @@ onMounted(() => {
   }, 530);
 
   document.addEventListener("keydown", handleKeydown);
+  
+  // Add scroll event listener after DOM is ready
+  nextTick(() => {
+    if (terminalContent.value) {
+      terminalContent.value.addEventListener("scroll", handleScroll);
+    }
+  });
 });
 
 onUnmounted(() => {
   clearInterval(cursorInterval);
   document.removeEventListener("keydown", handleKeydown);
+  
+  // Clean up scroll event listener and timeout
+  if (terminalContent.value) {
+    terminalContent.value.removeEventListener("scroll", handleScroll);
+  }
+  if (scrollTimeout) {
+    clearTimeout(scrollTimeout);
+  }
 });
 </script>
 

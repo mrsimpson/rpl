@@ -5,11 +5,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 
 const props = defineProps<{
   text: string
   speed: number
+  paused?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -19,9 +20,14 @@ const emit = defineEmits<{
 const displayText = ref('')
 const isTyping = ref(false)
 let currentIndex = 0
-let typingTimer: number
+let typingTimer: number | null = null
 
 const typeNextCharacter = () => {
+  if (props.paused) {
+    // If paused, don't continue typing but keep the timer reference
+    return
+  }
+  
   if (currentIndex < props.text.length) {
     displayText.value += props.text[currentIndex]
     currentIndex++
@@ -38,6 +44,26 @@ const startTyping = () => {
   displayText.value = ''
   typeNextCharacter()
 }
+
+const resumeTyping = () => {
+  if (isTyping.value && !typingTimer) {
+    typeNextCharacter()
+  }
+}
+
+// Watch for pause state changes
+watch(() => props.paused, (newPaused) => {
+  if (newPaused) {
+    // Pause: clear the timer but keep current state
+    if (typingTimer) {
+      clearTimeout(typingTimer)
+      typingTimer = null
+    }
+  } else {
+    // Resume: continue typing if we were in the middle of typing
+    resumeTyping()
+  }
+})
 
 onMounted(() => {
   startTyping()
