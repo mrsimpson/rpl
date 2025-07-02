@@ -16,6 +16,7 @@
           v-else-if="isCurrent"
           :text="message.content"
           :speed="getAnimationSpeed()"
+          :paused="paused"
           @complete="$emit('animationComplete')"
         />
         <span v-else class="static-content">{{ message.content }}</span>
@@ -37,6 +38,7 @@ const props = defineProps<{
   message: Message;
   isCurrent: boolean;
   settings: Settings;
+  paused?: boolean;
 }>();
 
 defineEmits<{

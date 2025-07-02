@@ -32,6 +32,17 @@
         </div>
       </div>
     </div>
+    
+    <!-- Fallback for unknown tool types or simple string content -->
+    <div v-else class="tool-unknown">
+      <div class="tool-header">
+        <span class="tool-icon">🔧</span>
+        <span class="tool-name">Tool Call</span>
+      </div>
+      <div class="tool-content">
+        <pre>{{ toolData.content || props.content }}</pre>
+      </div>
+    </div>
   </div>
 </template>
 
