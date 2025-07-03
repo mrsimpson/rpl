@@ -101,24 +101,121 @@ npm run dev
 
 ```
 src/
-├── components/           # Vue components
-│   ├── ConversationTerminal.vue    # Main terminal interface
+├── components/           # Reusable Vue components
+│   ├── ConversationDisplay.vue     # Main terminal interface (renamed from ConversationTerminal)
 │   ├── MessageRenderer.vue         # Individual message display
 │   ├── TypewriterText.vue         # Typewriter animation
-│   ├── SourceInput.vue            # URL input and loading
+│   ├── SourceInput.vue            # URL input and file loading
 │   ├── SettingsPanel.vue          # Configuration panel
-│   └── ProgressIndicator.vue      # Progress tracking
+│   ├── ProgressIndicator.vue      # Progress tracking
+│   ├── AppFooter.vue              # Global footer with slot architecture
+│   ├── PlaybackControls.vue       # Playback control buttons and hints
+│   └── HackathonBadge.vue         # Project badge
+├── views/               # Router view components
+│   ├── HomeView.vue               # Home page with source input
+│   ├── ConversationView.vue       # Conversation display page
+│   ├── HomeFooter.vue             # Home page footer content
+│   └── ConversationFooter.vue     # Conversation page footer content
+├── composables/         # Vue 3 composables
+│   └── useConversationState.ts    # Unified conversation state management
 ├── adapters/            # Source adapters
 │   ├── FileSourceAdapter.ts       # Local file loading
 │   └── GistSourceAdapter.ts       # GitHub Gist integration
 ├── parsers/             # Format parsers
 │   ├── TextFormatParser.ts        # Shell-style text format
 │   └── JsonFormatParser.ts        # Q-Developer JSON format
+├── router/              # Vue Router configuration
+│   └── index.ts                   # Route definitions with named views
 ├── types/               # TypeScript definitions
 │   └── index.ts                   # Core interfaces
-├── App.vue              # Root component
+├── App.vue              # Root component (global concerns only)
 ├── main.ts              # Application entry point
 └── style.css            # Global styles and themes
+```
+
+## 🏗️ Architecture
+
+### Component Hierarchy
+
+The application follows a clean separation of concerns with three main layers:
+
+#### 1. **Global Layer (App.vue)**
+- **Responsibilities**: Settings management, theme control, global dialogs
+- **State**: Settings persistence, dark mode, dialog visibility
+- **Does NOT handle**: Conversation loading, source input, conversation display
+
+#### 2. **View Layer (src/views/)**
+- **HomeView.vue**: Source input and file selection interface
+- **ConversationView.vue**: Conversation state management and display coordination
+- **Footer Views**: Contextual footer content for each page
+
+#### 3. **Component Layer (src/components/)**
+- **Presentation Components**: ConversationDisplay, MessageRenderer, TypewriterText
+- **Input Components**: SourceInput with File System Access API support
+- **UI Components**: AppFooter with slot architecture, PlaybackControls
+
+### State Management
+
+#### Unified Composable Pattern
+```typescript
+// useConversationState.ts - Global conversation state
+const {
+  conversationData,    // Current conversation
+  loading,            // Loading state
+  error,              // Error messages
+  contextItems,       // Context files/media
+  loadFromUrl,        // URL-based loading
+  setLocalData,       // Local file/folder loading
+  clearData           // Reset state
+} = useConversationState()
+```
+
+#### Data Flow
+1. **URL Loading**: ConversationView → useConversationState → Source Adapters → Parsers
+2. **Local Loading**: HomeView → SourceInput → useConversationState → Direct data setting
+3. **Display**: ConversationView → ConversationDisplay (props) → MessageRenderer
+
+### Router Architecture
+
+#### Named Views for Contextual UI
+```typescript
+// Different footer content per route
+{
+  path: '/conversation',
+  components: {
+    default: ConversationView,    // Main content
+    footer: ConversationFooter    // Contextual footer
+  }
+}
+```
+
+#### Benefits
+- **Contextual footers**: Home shows app info, Conversation shows playback controls
+- **Clean separation**: Each view manages its own footer content
+- **Reusable components**: AppFooter provides consistent styling with slots
+
+### File System Integration
+
+#### Local Folder Support
+- **File System Access API**: Secure local folder selection
+- **Folder Structure**: `conversation.txt` + context files in same directory
+- **Context Discovery**: Automatic detection of images, videos, code files
+- **Blob URL Handling**: Proper local file access without CORS issues
+
+### Event-Driven Communication
+
+#### Footer ↔ Conversation Communication
+```typescript
+// Footer emits global events
+window.dispatchEvent(new CustomEvent('playback-toggle'))
+
+// ConversationDisplay listens for events
+window.addEventListener('playback-toggle', togglePlayback)
+
+// State synchronization
+window.dispatchEvent(new CustomEvent('playback-state-change', {
+  detail: { isPlaying: newValue }
+}))
 ```
 
 ## 🔧 Supported Formats

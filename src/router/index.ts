@@ -5,15 +5,24 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'Home',
-    component: () => import('../views/HomeView.vue')
+    components: {
+      default: () => import('../views/HomeView.vue'),
+      footer: () => import('../views/HomeFooter.vue')
+    }
   },
   {
     path: '/conversation',
     name: 'Conversation',
-    component: () => import('../views/ConversationView.vue'),
-    props: (route) => ({
-      conversationUrl: route.query.url as string
-    })
+    components: {
+      default: () => import('../views/ConversationView.vue'),
+      footer: () => import('../views/ConversationFooter.vue')
+    },
+    props: {
+      default: (route) => ({
+        conversationUrl: route.query.url as string
+      }),
+      footer: true
+    }
   }
 ]
 

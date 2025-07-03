@@ -24,25 +24,17 @@
         </div>
       </div>
 
-      <footer class="app-footer">
-        <div class="instructions">
-          <span><kbd>Enter</kbd> Next message</span>
-          <span><kbd>Tab</kbd> Complete current</span>
-          <span><kbd>Esc</kbd> Reset</span>
-          <button
-            @click="toggleSettings"
-            class="settings-btn"
-            :class="{ active: showSettings }"
-          >
-            <SettingsIcon class="icon" />
-            Settings
-          </button>
-          <button @click="toggleDarkMode" class="theme-btn">
-            <SunIcon v-if="isDarkMode" class="icon" />
-            <MoonIcon v-else class="icon" />
-          </button>
-        </div>
-      </footer>
+      <!-- App Footer with slot for page-specific content -->
+      <AppFooter
+        :show-settings="showSettings"
+        :is-dark-mode="isDarkMode"
+        @toggle-settings="toggleSettings"
+        @toggle-theme="toggleDarkMode"
+      >
+        <template #main>
+          <router-view name="footer" :settings="settings" />
+        </template>
+      </AppFooter>
     </main>
 
     <!-- Hackathon Badge -->
@@ -52,8 +44,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
-import { SettingsIcon, SunIcon, MoonIcon } from "lucide-vue-next";
 import SettingsPanel from "./components/SettingsPanel.vue";
+import AppFooter from "./components/AppFooter.vue";
 import HackathonBadge from "./components/HackathonBadge.vue";
 import type { Settings } from "./types";
 
@@ -121,64 +113,6 @@ onMounted(() => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-.app-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(0, 0, 0, 0.9);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid var(--terminal-text);
-  padding: 0.5rem 1rem;
-  z-index: 1000;
-}
-
-.instructions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  font-size: 0.8rem;
-  color: var(--terminal-text);
-}
-
-.instructions kbd {
-  background: var(--terminal-text);
-  color: var(--terminal-bg);
-  padding: 0.2rem 0.4rem;
-  border-radius: 3px;
-  font-size: 0.7rem;
-  font-weight: bold;
-}
-
-.settings-btn,
-.theme-btn {
-  background: transparent;
-  border: 1px solid var(--terminal-text);
-  color: var(--terminal-text);
-  padding: 0.3rem 0.6rem;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.7rem;
-  transition: all 0.2s ease;
-  margin-left: auto;
-}
-
-.settings-btn:hover,
-.theme-btn:hover,
-.settings-btn.active {
-  background: var(--terminal-text);
-  color: var(--terminal-bg);
-}
-
-.settings-btn .icon,
-.theme-btn .icon {
-  width: 12px;
-  height: 12px;
 }
 
 .settings-dialog-overlay {

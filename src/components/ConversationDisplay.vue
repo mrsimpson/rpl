@@ -3,22 +3,13 @@
     <!-- Terminal Window Header -->
     <div class="window-header">
       <div class="window-controls">
-        <div class="control-button close"></div>
+        <div class="control-button close" @click="$emit('reset')"></div>
         <div class="control-button minimize"></div>
         <div class="control-button maximize"></div>
       </div>
       <div class="window-title">LLM Conversation Replay</div>
       <div class="terminal-controls">
-        <button @click="togglePlayback" class="control-btn">
-          <PlayIcon v-if="!isPlaying" class="icon" />
-          <PauseIcon v-else class="icon" />
-        </button>
-        <button @click="restart" class="control-btn">
-          <RotateCcwIcon class="icon" />
-        </button>
-        <button @click="$emit('reset')" class="control-btn">
-          <XIcon class="icon" />
-        </button>
+        <!-- Remove individual controls - they're now in the footer -->
       </div>
     </div>
 
@@ -84,7 +75,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
-import { PlayIcon, PauseIcon, RotateCcwIcon, XIcon } from "lucide-vue-next";
 import MessageRenderer from "./MessageRenderer.vue";
 import ProgressIndicator from "./ProgressIndicator.vue";
 import type { ConversationData, Settings } from "../types";
@@ -96,7 +86,7 @@ const props = defineProps<{
   contextLoading?: boolean;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   reset: [];
 }>();
 
@@ -403,6 +393,11 @@ onMounted(() => {
       terminalContent.value.addEventListener("scroll", handleScroll);
     }
   });
+
+  // Event listeners for footer controls
+  window.addEventListener('playback-toggle', togglePlayback)
+  window.addEventListener('playback-restart', restart)
+  window.addEventListener('playback-reset', () => emit('reset'))
 });
 
 onUnmounted(() => {
@@ -416,7 +411,19 @@ onUnmounted(() => {
   if (scrollTimeout) {
     clearTimeout(scrollTimeout);
   }
+
+  // Clean up footer event listeners
+  window.removeEventListener('playback-toggle', togglePlayback)
+  window.removeEventListener('playback-restart', restart)
+  window.removeEventListener('playback-reset', () => emit('reset'))
 });
+
+// Emit playback state changes for footer
+watch(isPlaying, (newValue) => {
+  window.dispatchEvent(new CustomEvent('playback-state-change', {
+    detail: { isPlaying: newValue }
+  }))
+})
 </script>
 
 <style scoped>
@@ -478,10 +485,25 @@ onUnmounted(() => {
   border-radius: 50%;
   border: none;
   cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .window-style-macos .control-button.close {
   background-color: #ff5f57;
+}
+
+.window-style-macos .control-button.close:hover {
+  background-color: #ff3b30;
+}
+
+.window-style-macos .control-button.close::after {
+  content: '×';
+  color: #000;
+  font-size: 10px;
+  font-weight: bold;
 }
 
 .window-style-macos .control-button.minimize {
