@@ -6,6 +6,18 @@ This document describes the architecture of the LLM Conversation Replay Player, 
 
 The application follows a modular Vue.js architecture with clear separation of concerns between UI components, data adapters, and business logic. The core design principle is extensibility through adapter patterns for both data sources and conversation formats.
 
+## Architectural Principles
+
+### Separation of Concerns
+- **App Level**: Handles routing, global error/notification handling, and application-wide state
+- **Conversation Level**: Manages conversation display, playback control, and contextual data visualization
+- **Component Level**: Focused, reusable UI components with single responsibilities
+
+### Responsibility Distribution
+- **App.vue**: Global concerns (routing, error handling, settings persistence)
+- **ConversationTerminal.vue**: Conversation-specific concerns (display, playback, context)
+- **Specialized Components**: Focused functionality (message rendering, typewriter effects, context panels)
+
 ## High-Level Architecture
 
 ```mermaid
@@ -56,10 +68,10 @@ graph TB
 
 #### App.vue (Root Component)
 **Responsibilities:**
-- Application state management
-- Settings persistence
-- Modal dialog management
-- Theme and dark mode handling
+- **Routing**: Navigation between home and conversation views
+- **Global error/notification handling**: Provider placeholders, error boundaries
+- **Settings persistence**: User preferences storage
+- **Theme and dark mode handling**: Global UI state
 
 **Key State:**
 - `conversationData`: Current loaded conversation
@@ -74,12 +86,18 @@ graph LR
     App --> |handles| Theme[Theme Management]
 ```
 
-#### ConversationTerminal.vue (Main Terminal Interface)
+#### ConversationWrapper.vue (Conversation Controller)
 **Responsibilities:**
-- Conversation playback state machine
-- Keyboard interaction handling
-- Message flow control
-- Cursor and ghost message display
+- **Conversation state management**: Playback control, message progression, timing
+- **Context management**: Context discovery, contextual data visualization  
+- **Layout management**: Terminal and context panel coordination
+- **User interaction handling**: Keyboard controls, playback state machine
+
+#### ConversationTerminal.vue (Message Visualization)
+**Responsibilities:**
+- **Message rendering**: Stateless display of conversation messages
+- **Typewriter effects**: Current message typing animation state only
+- **Terminal UI**: Window styling, cursor display, visual formatting
 
 **State Machine:**
 ```mermaid
