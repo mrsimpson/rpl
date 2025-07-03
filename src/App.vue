@@ -1,41 +1,8 @@
 <template>
   <div class="app" :class="{ 'dark-mode': isDarkMode }">
     <main class="main-container">
-
-      <div class="content-area">
-        <section class="conversation-area">
-          <!-- Loading state -->
-          <div v-if="loading" class="loading-container">
-            <div class="loading-message">
-              <div class="spinner"></div>
-              <p>Loading conversation...</p>
-            </div>
-          </div>
-
-          <!-- Error state -->
-          <div v-else-if="error" class="error-container">
-            <div class="error-message">
-              <h3>Error Loading Conversation</h3>
-              <p>{{ error }}</p>
-              <p class="redirect-message">Redirecting to home in a few seconds...</p>
-            </div>
-          </div>
-
-          <!-- Source input (home state) -->
-          <div v-else-if="!conversationData" class="source-input">
-            <SourceInput @load-conversation="loadConversation" />
-          </div>
-
-          <!-- Conversation terminal -->
-          <div v-else class="terminal-container">
-            <ConversationTerminal
-              :conversation-data="conversationData"
-              :settings="settings"
-              @reset="resetConversation"
-            />
-          </div>
-        </section>
-      </div>
+      <!-- Router view for different pages -->
+      <router-view :settings="settings" />
 
       <!-- Settings Dialog -->
       <div
@@ -62,11 +29,11 @@
           <span><kbd>Enter</kbd> Next message</span>
           <span><kbd>Tab</kbd> Complete current</span>
           <span><kbd>Esc</kbd> Reset</span>
-            <button
+          <button
             @click="toggleSettings"
             class="settings-btn"
             :class="{ active: showSettings }"
-            >
+          >
             <SettingsIcon class="icon" />
             Settings
           </button>
@@ -74,7 +41,7 @@
             <SunIcon v-if="isDarkMode" class="icon" />
             <MoonIcon v-else class="icon" />
           </button>
-      </div>
+        </div>
       </footer>
     </main>
 
@@ -84,27 +51,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch, computed } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { ref, reactive, onMounted } from "vue";
 import { SettingsIcon, SunIcon, MoonIcon } from "lucide-vue-next";
-import SourceInput from "./components/SourceInput.vue";
 import SettingsPanel from "./components/SettingsPanel.vue";
-import ConversationTerminal from "./components/ConversationTerminal.vue";
 import HackathonBadge from "./components/HackathonBadge.vue";
-import { TextFormatParser } from "./parsers/TextFormatParser";
-import { JsonFormatParser } from "./parsers/JsonFormatParser";
-import { FileSourceAdapter } from "./adapters/FileSourceAdapter";
-import { GistSourceAdapter } from "./adapters/GistSourceAdapter";
-import type { ConversationData, Settings } from "./types";
-
-const route = useRoute();
-const router = useRouter();
+import type { Settings } from "./types";
 
 const isDarkMode = ref(true);
 const showSettings = ref(false);
-const conversationData = ref<ConversationData | null>(null);
-const loading = ref(false);
-const error = ref("");
 
 const settings = reactive<Settings>({
   humanAnimationSpeed: 50,
@@ -115,9 +69,6 @@ const settings = reactive<Settings>({
   showGhostPreview: true,
   enableSounds: false,
 });
-
-// Computed property to get conversation URL from route
-const conversationUrl = computed(() => route.query.url as string);
 
 const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value;
@@ -137,278 +88,166 @@ const updateSettings = (newSettings: Partial<Settings>) => {
   localStorage.setItem("replaySettings", JSON.stringify(settings));
 };
 
-const loadConversation = (data: ConversationData) => {
-  conversationData.value = data;
-  showSettings.value = false;
-  error.value = "";
-};
-
-const resetConversation = () => {
-  conversationData.value = null;
-  error.value = "";
-  // Navigate to home route
-  router.push('/');
-};
-
-const loadConversationFromUrl = async (url: string) => {
-  if (!url) return;
-
-  loading.value = true;
-  error.value = "";
-
-  try {
-    // Handle special demo URL
-    if (url === 'demo') {
-      const demoData: ConversationData = {
-        metadata: {
-          title: 'Demo Conversation',
-          timestamp: new Date().toISOString(),
-          format: 'demo'
-        },
-        messages: [
-          {
-            id: '1',
-            type: 'human',
-            content: 'Hello! Can you help me understand how neural networks work?',
-            timestamp: new Date().toISOString()
-          },
-          {
-            id: '2',
-            type: 'agent',
-            content: 'I\'d be happy to explain neural networks! Neural networks are computational models inspired by biological neural networks. They consist of interconnected nodes (neurons) organized in layers.',
-            timestamp: new Date().toISOString()
-          },
-          {
-            id: '3',
-            type: 'tool_call',
-            content: 'generate_diagram(type="neural_network", layers=3)',
-            timestamp: new Date().toISOString()
-          },
-          {
-            id: '4',
-            type: 'human', 
-            content: 'That\'s helpful! How do they learn from data?',
-            timestamp: new Date().toISOString()
-          },
-          {
-            id: '5',
-            type: 'agent',
-            content: 'Neural networks learn through a process called backpropagation. During training, the network makes predictions, compares them to expected outputs, and adjusts weights to minimize errors.',
-            timestamp: new Date().toISOString()
-          }
-        ]
-      };
-      loadConversation(demoData);
-      return;
-    }
-
-    // Determine source adapter
-    const adapter = url.includes('gist.github.com')
-      ? new GistSourceAdapter()
-      : new FileSourceAdapter();
-
-    // Fetch content
-    const content = await adapter.fetchContent(url);
-
-    // Auto-detect format
-    const parser = detectFormat(content) === 'json'
-      ? new JsonFormatParser()
-      : new TextFormatParser();
-
-    const data = await parser.parse(content);
-    loadConversation(data);
-
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load conversation';
-    // Redirect to home on error
-    setTimeout(() => {
-      router.push('/');
-    }, 3000);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const detectFormat = (content: string): 'json' | 'text' => {
-  try {
-    JSON.parse(content);
-    return 'json';
-  } catch {
-    return 'text';
-  }
-};
-
-// Watch for route changes to load conversation from URL
-watch(conversationUrl, (newUrl) => {
-  if (newUrl && route.name === 'Conversation') {
-    loadConversationFromUrl(newUrl);
-  }
-}, { immediate: true });
-
-// Watch for route changes to reset state when going to home
-watch(() => route.name, (newRouteName) => {
-  if (newRouteName === 'Home') {
-    conversationData.value = null;
-    error.value = "";
-    loading.value = false;
-  }
-});
-
+// Load settings from localStorage on mount
 onMounted(() => {
-  // Load saved preferences
+  const savedSettings = localStorage.getItem("replaySettings");
+  if (savedSettings) {
+    try {
+      const parsed = JSON.parse(savedSettings);
+      Object.assign(settings, parsed);
+    } catch (e) {
+      console.warn("Failed to parse saved settings:", e);
+    }
+  }
+
   const savedDarkMode = localStorage.getItem("darkMode");
   if (savedDarkMode !== null) {
     isDarkMode.value = savedDarkMode === "true";
   }
-
-  const savedSettings = localStorage.getItem("replaySettings");
-  if (savedSettings) {
-    Object.assign(settings, JSON.parse(savedSettings));
-  }
 });
 </script>
 
-<style scoped>
-.icon {
-  width: 16px;
-  height: 16px;
+<style>
+/* Global styles remain the same */
+.app {
+  min-height: 100vh;
+  background: var(--terminal-bg);
+  color: var(--terminal-text);
+  font-family: 'Fira Code', 'Monaco', 'Cascadia Code', 'Ubuntu Mono', monospace;
+  transition: all 0.3s ease;
 }
 
-/* Loading state */
-.loading-container {
+.main-container {
+  min-height: 100vh;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 50vh;
+  flex-direction: column;
 }
 
-.loading-message {
-  text-align: center;
-  color: var(--color-text-primary);
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid var(--color-border);
-  border-top: 4px solid var(--color-accent);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 1rem;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Error state */
-.error-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 50vh;
-}
-
-.error-message {
-  text-align: center;
-  color: var(--color-text-primary);
-  max-width: 500px;
-  padding: 2rem;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background-color: var(--color-bg-secondary);
-}
-
-.error-message h3 {
-  color: #ff6b6b;
-  margin-bottom: 1rem;
-}
-
-.redirect-message {
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
-  margin-top: 1rem;
-}
-
-.conversation-area {
-  position: relative;
-}
-
-.terminal-container {
-  position: absolute;
-  top: 0;
+.app-footer {
+  position: fixed;
+  bottom: 0;
   left: 0;
   right: 0;
-  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--terminal-text);
+  padding: 0.5rem 1rem;
+  z-index: 1000;
+}
+
+.instructions {
   display: flex;
-  justify-content: center;
   align-items: center;
-  padding: 5vh 12vw 5vh 5vw; /* Increased right padding to accommodate hackathon badge */
-  box-sizing: border-box;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: var(--terminal-text);
 }
 
-/* Mobile responsive padding for smaller badge */
-@media (max-width: 768px) {
-  .terminal-container {
-    padding: 5vh 8vw 5vh 5vw; /* Reduced right padding for mobile badge size */
-  }
+.instructions kbd {
+  background: var(--terminal-text);
+  color: var(--terminal-bg);
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: bold;
 }
 
-.terminal-container :deep(.terminal-window) {
-  width: 90vw;
-  height: 90vh;
-  max-width: 90vw;
-  max-height: 90vh;
-  min-width: 90vw;
-  min-height: 90vh;
+.settings-btn,
+.theme-btn {
+  background: transparent;
+  border: 1px solid var(--terminal-text);
+  color: var(--terminal-text);
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  transition: all 0.2s ease;
+  margin-left: auto;
 }
 
-/* Settings Dialog */
+.settings-btn:hover,
+.theme-btn:hover,
+.settings-btn.active {
+  background: var(--terminal-text);
+  color: var(--terminal-bg);
+}
+
+.settings-btn .icon,
+.theme-btn .icon {
+  width: 12px;
+  height: 12px;
+}
+
 .settings-dialog-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.8);
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
+  justify-content: center;
+  z-index: 2000;
 }
 
 .settings-dialog {
-  background-color: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
+  background: var(--terminal-bg);
+  border: 2px solid var(--terminal-text);
+  border-radius: 8px;
   width: 90%;
   max-width: 500px;
   max-height: 80vh;
   overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--terminal-text);
+}
+
+.settings-header h3 {
+  margin: 0;
+  color: var(--terminal-text);
 }
 
 .close-btn {
-  background: none;
+  background: transparent;
   border: none;
-  font-size: 24px;
-  color: var(--color-text-secondary);
+  color: var(--terminal-text);
+  font-size: 1.5rem;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: var(--transition);
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .close-btn:hover {
-  background-color: var(--color-bg-tertiary);
-  color: var(--color-text-primary);
+  background: var(--terminal-text);
+  color: var(--terminal-bg);
+  border-radius: 50%;
 }
 
 .settings-content {
-  padding: var(--spacing-3);
-  max-height: calc(80vh - 80px);
+  padding: 1rem;
+  max-height: 60vh;
   overflow-y: auto;
 }
+
+/* Dark mode styles */
+.dark-mode {
+  --terminal-bg: #000000;
+  --terminal-text: #00ff00;
+}
+
+/* Theme variables are set in style.css */
 </style>

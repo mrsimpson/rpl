@@ -92,6 +92,8 @@ import type { ConversationData, Settings } from "../types";
 const props = defineProps<{
   conversationData: ConversationData;
   settings: Settings;
+  contextItems?: any[];
+  contextLoading?: boolean;
 }>();
 
 defineEmits<{
@@ -425,6 +427,8 @@ onUnmounted(() => {
   border-radius: var(--window-border-radius);
   overflow: hidden;
   box-shadow: var(--window-shadow);
+  height: 100vh;
+  max-height: 100vh;
 }
 
 /* Window Styles */
@@ -552,6 +556,8 @@ onUnmounted(() => {
   line-height: 1.4;
   width: 100%;
   box-sizing: border-box;
+  min-height: 0;
+  max-height: calc(100vh - 120px); /* Account for header and footer */
 }
 
 .conversation-metadata {

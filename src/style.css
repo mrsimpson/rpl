@@ -562,7 +562,5 @@ body {
 }
 
 @media (min-width: 1025px) {
-  .main-container {
-    max-width: 1400px;
-  }
+
 }

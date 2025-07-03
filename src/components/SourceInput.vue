@@ -65,6 +65,14 @@
         class="file-input"
       />
     </div>
+
+    <div class="folder-selection" v-if="supportsFileSystemAccess">
+      <button @click="selectFolder" class="folder-btn" :disabled="loading">
+        <FolderIcon class="icon" />
+        Select Local Folder
+      </button>
+      <p class="folder-help">Select a folder containing conversation.txt and context files</p>
+    </div>
   </div>
 
   <!-- Toast notification for text format parsing -->
@@ -75,20 +83,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { LoaderIcon, DownloadIcon, PlayIcon } from 'lucide-vue-next'
+import { ref, computed } from 'vue'
+import { LoaderIcon, DownloadIcon, PlayIcon, FolderIcon } from 'lucide-vue-next'
 import { TextFormatParser } from '../parsers/TextFormatParser'
 import { JsonFormatParser } from '../parsers/JsonFormatParser'
-import { FileSourceAdapter } from '../adapters/FileSourceAdapter'
-import { GistSourceAdapter } from '../adapters/GistSourceAdapter'
 import ToastNotification from './ToastNotification.vue'
 import type { ConversationData } from '../types'
 
-const router = useRouter()
-
 const emit = defineEmits<{
-  loadConversation: [data: ConversationData]
+  loadConversation: [event: {
+    data: ConversationData;
+    source: string;
+    contextItems?: any[];
+  }]
 }>()
 
 const sourceUrl = ref('')
@@ -97,11 +104,80 @@ const loading = ref(false)
 const error = ref('')
 const showTextFormatToast = ref(false)
 
+// Check if File System Access API is supported
+const supportsFileSystemAccess = computed(() => {
+  return 'showDirectoryPicker' in window
+})
+
+const selectFolder = async () => {
+  if (!supportsFileSystemAccess.value) {
+    error.value = 'File System Access API not supported in this browser'
+    return
+  }
+
+  loading.value = true
+  error.value = ''
+
+  try {
+    // Use File System Access API to select folder
+    const dirHandle = await (window as any).showDirectoryPicker()
+    
+    // Simple folder processing - look for conversation file
+    let conversationData: ConversationData | null = null
+    const contextItems: any[] = []
+    
+    for await (const [name, handle] of dirHandle.entries()) {
+      if (handle.kind === 'file') {
+        if (name === 'conversation.txt' || name === 'conversation.json') {
+          // Found conversation file
+          const file = await handle.getFile()
+          const content = await file.text()
+          
+          const parser = name.endsWith('.json') ? new JsonFormatParser() : new TextFormatParser()
+          conversationData = await parser.parse(content)
+        } else if (name.match(/\.(jpg|jpeg|png|gif|mp4|mov|txt|js|py|md)$/i)) {
+          // Found potential context file
+          const file = await handle.getFile()
+          const url = URL.createObjectURL(file)
+          contextItems.push({
+            name,
+            url,
+            type: file.type || 'application/octet-stream',
+            size: file.size
+          })
+        }
+      }
+    }
+    
+    if (conversationData) {
+      // Emit local folder loading event
+      emit('loadConversation', {
+        data: conversationData,
+        source: 'local',
+        contextItems
+      })
+    } else {
+      error.value = 'No conversation file (conversation.txt or conversation.json) found in selected folder'
+    }
+
+  } catch (err) {
+    if ((err as Error).name !== 'AbortError') {
+      console.error('Folder selection error:', err)
+      error.value = err instanceof Error ? err.message : 'Failed to process folder'
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
 const loadSource = async () => {
   if (!sourceUrl.value) return
 
-  // Navigate to conversation route with URL parameter
-  router.push(`/conversation?url=${encodeURIComponent(sourceUrl.value)}`)
+  // Emit URL-based loading event
+  emit('loadConversation', {
+    data: {} as ConversationData, // Will be loaded by ConversationView
+    source: sourceUrl.value
+  })
 }
 
 const handleFileUpload = async (event: Event) => {
@@ -119,7 +195,13 @@ const handleFileUpload = async (event: Event) => {
     const parser = format === 'json' ? new JsonFormatParser() : new TextFormatParser()
     
     const conversationData = await parser.parse(content)
-    emit('loadConversation', conversationData)
+    
+    // Emit local file loading event
+    emit('loadConversation', {
+      data: conversationData,
+      source: 'local',
+      contextItems: [] // No context items for direct file upload
+    })
 
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to parse file'
@@ -129,17 +211,11 @@ const handleFileUpload = async (event: Event) => {
 }
 
 const loadDemo = () => {
-  // Navigate to conversation route with demo parameter
-  router.push('/conversation?url=demo')
-}
-
-const detectFormat = (content: string): 'json' | 'text' => {
-  try {
-    JSON.parse(content)
-    return 'json'
-  } catch {
-    return 'text'
-  }
+  // Emit demo loading event
+  emit('loadConversation', {
+    data: {} as ConversationData, // Will be loaded by ConversationView
+    source: 'demo'
+  })
 }
 </script>
 
@@ -147,6 +223,42 @@ const detectFormat = (content: string): 'json' | 'text' => {
 .icon {
   width: 16px;
   height: 16px;
+}
+
+.folder-selection {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.folder-btn {
+  background: var(--terminal-text);
+  color: var(--terminal-bg);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: inherit;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.folder-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.folder-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.folder-help {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  opacity: 0.7;
 }
 
 .animate-spin {

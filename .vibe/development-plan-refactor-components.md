@@ -57,58 +57,61 @@ Refactor the Vue.js conversation replay application's component hierarchy to imp
 ### Implementation Tasks
 
 #### Step 1: Create Unified Conversation State Management
-- [ ] Create `src/composables/useConversationState.ts`
-- [ ] Implement unified state management for both URL and local file loading
-- [ ] Include loading, error, and conversation data state
-- [ ] Add methods: `loadFromUrl()`, `setLocalData()`, `clearData()`
-- [ ] Integrate context discovery state management
+- [x] Create `src/composables/useConversationState.ts`
+- [x] Implement unified state management for both URL and local file loading
+- [x] Include loading, error, and conversation data state
+- [x] Add methods: `loadFromUrl()`, `setLocalData()`, `clearData()`
+- [ ] Integrate context discovery state management (placeholder implemented)
 
 #### Step 2: Create View Components Structure
-- [ ] Create `src/views/` directory
-- [ ] Create `HomeView.vue` - extract source input logic from App.vue
-- [ ] Create `ConversationView.vue` - extract conversation management from App.vue
-- [ ] Update router to use proper view components
+- [x] Create `src/views/` directory
+- [x] Create `HomeView.vue` - extract source input logic from App.vue
+- [x] Create `ConversationView.vue` - extract conversation management from App.vue
+- [x] Update router to use proper view components
 
 #### Step 3: Refactor App.vue (Global Concerns Only)
-- [ ] Remove conversation loading logic
-- [ ] Remove source input rendering
-- [ ] Keep only: settings management, theme/dark mode, router-view, global error handling
-- [ ] Add proper router-view template
-- [ ] Preserve settings persistence and global state
+- [x] Remove conversation loading logic
+- [x] Remove source input rendering
+- [x] Keep only: settings management, theme/dark mode, router-view, global error handling
+- [x] Add proper router-view template
+- [x] Preserve settings persistence and global state
 
 #### Step 3: Extract Conversation State Management
-- [ ] Update HomeView.vue to use `useConversationState()` for local file loading
-- [ ] Update ConversationView.vue to use `useConversationState()` for URL-based loading
-- [ ] Move context discovery integration to the composable
-- [ ] Create clean props interface for passing data to ConversationDisplay.vue
-- [ ] Handle both loading scenarios: URL params and pre-loaded local data
+- [x] Update HomeView.vue to use `useConversationState()` for local file loading
+- [x] Update ConversationView.vue to use `useConversationState()` for URL-based loading
+- [ ] Move context discovery integration to the composable (placeholder implemented)
+- [x] Create clean props interface for passing data to ConversationDisplay.vue
+- [x] Handle both loading scenarios: URL params and pre-loaded local data
 
 #### Step 4: Refactor ConversationTerminal.vue → ConversationDisplay.vue
-- [ ] Rename ConversationTerminal.vue to ConversationDisplay.vue
-- [ ] Keep all existing terminal functionality (playback, pause, scroll-to-pause)
-- [ ] Keep playback state management in ConversationDisplay.vue
-- [ ] Remove conversation loading concerns (now handled by ConversationView)
-- [ ] Update props to receive conversation data from parent
-- [ ] Preserve all existing terminal features and animations
+- [x] Rename ConversationTerminal.vue to ConversationDisplay.vue
+- [x] Keep all existing terminal functionality (playback, pause, scroll-to-pause)
+- [x] Keep playback state management in ConversationDisplay.vue
+- [x] Remove conversation loading concerns (now handled by ConversationView)
+- [x] Update props to receive conversation data from parent
+- [x] Preserve all existing terminal features and animations
 
 #### Step 5: Update Component Imports and References
-- [ ] Update all imports of ConversationTerminal to ConversationDisplay
-- [ ] Update router imports to use new view components
+- [x] Update all imports of ConversationTerminal to ConversationDisplay
+- [x] Update router imports to use new view components
 - [ ] Update any component references in tests or documentation
 
 #### Step 6: Integration and Testing
-- [ ] Test home page functionality (source input)
-- [ ] Test conversation loading via URL parameters
-- [ ] Test context discovery and visualization
-- [ ] Test all existing terminal features (playback, pause, scroll, etc.)
-- [ ] Test settings persistence across views
-- [ ] Test theme and dark mode functionality
+- [x] Test home page functionality (source input)
+- [x] Test conversation loading via URL parameters
+- [ ] Test context discovery and visualization (placeholder implemented)
+- [x] Test all existing terminal features (playback, pause, scroll, etc.)
+- [x] Test settings persistence across views
+- [x] Test theme and dark mode functionality
 
 ### Completed
-*None yet*
-
-### Completed
-*None yet*
+- [x] Successfully refactored component hierarchy with proper separation of concerns
+- [x] Implemented unified composable for conversation state management
+- [x] Created proper router view structure with HomeView and ConversationView
+- [x] Preserved all existing terminal functionality and features
+- [x] Maintained settings and theme management at App level
+- [x] Added File System Access API support for local folder selection
+- [x] Verified both URL-based and local file loading workflows
 
 ## Commit
 

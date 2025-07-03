@@ -5,12 +5,12 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'Home',
-    component: () => import('../App.vue')
+    component: () => import('../views/HomeView.vue')
   },
   {
     path: '/conversation',
     name: 'Conversation',
-    component: () => import('../App.vue'),
+    component: () => import('../views/ConversationView.vue'),
     props: (route) => ({
       conversationUrl: route.query.url as string
     })
