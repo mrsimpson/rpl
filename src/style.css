@@ -6,6 +6,9 @@
 }
 
 :root {
+  /* Layout dimensions */
+  --footer-height: 60px;
+  
   /* Base font and spacing */
   --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
   --font-size-sm: 12px;

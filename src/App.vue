@@ -60,6 +60,7 @@ const settings = reactive<Settings>({
   showProgress: true,
   showGhostPreview: true,
   enableSounds: false,
+  contextPanelWidth: 400, // Default context panel width in pixels
 });
 
 const toggleDarkMode = () => {

@@ -19,12 +19,41 @@
 
     <!-- Conversation display -->
     <div v-else-if="conversationData" class="conversation-container">
-      <ConversationDisplay
-        :conversation-data="conversationData as ConversationData"
-        :context-items="contextItems as any[]"
-        :context-loading="contextLoading"
+      <!-- Main conversation display -->
+      <div 
+        class="terminal-panel"
+        :style="{ width: showContextPanel && !isMobile ? `${terminalWidth}px` : '100%' }"
+      >
+        <ConversationDisplay
+          :conversation-data="conversationData as ConversationData"
+          :context-items="contextItems as any[]"
+          :context-loading="contextLoading"
+          :settings="props.settings"
+          @reset="handleReset"
+          @message-complete="handleMessageComplete"
+          @message-has-context="handleMessageHasContext"
+        />
+      </div>
+      
+      <!-- Draggable Divider (desktop only) -->
+      <DraggableDivider
+        v-if="showContextPanel && !isMobile"
+        :min-width="300"
+        :max-width="windowWidth - 400"
+        @resize="handleDividerResize"
+      />
+      
+      <!-- Context Panel -->
+      <ContextPanel
+        :visible="showContextPanel"
+        :context-items="currentMessageContext as ContextItem[]"
+        :loading="contextLoading"
+        :error="contextError"
+        :is-mobile="isMobile"
         :settings="props.settings"
-        @reset="handleReset"
+        :style="{ width: showContextPanel && !isMobile ? `${contextPanelWidth}px` : 'auto' }"
+        @close="handleCloseContextPanel"
+        @retry="handleRetryContext"
       />
     </div>
 
@@ -40,11 +69,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { onMounted, watch, computed, ref, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ConversationDisplay from '../components/ConversationDisplay.vue'
+import ContextPanel from '../components/ContextPanel.vue'
+import DraggableDivider from '../components/DraggableDivider.vue'
 import { useConversationState } from '../composables/useConversationState'
-import type { Settings, ConversationData } from '../types'
+import type { Settings, ConversationData, ContextItem } from '../types'
 
 const props = defineProps<{
   settings: Settings
@@ -59,10 +90,38 @@ const {
   error,
   contextItems,
   contextLoading,
+  contextError,
+  currentMessageContext,
+  showContextPanel,
   loadFromUrl,
-  clearData
+  clearData,
+  updateCurrentMessageContext,
+  toggleContextPanel,
+  discoverContext
 } = useConversationState()
 
+// Draggable divider state
+const windowWidth = ref(window.innerWidth)
+const contextPanelWidth = ref(props.settings.contextPanelWidth || 400)
+const terminalWidth = computed(() => windowWidth.value - contextPanelWidth.value - 8) // 8px for divider
+
+// Update window width on resize
+const updateWindowWidth = () => {
+  windowWidth.value = window.innerWidth
+}
+
+onMounted(() => {
+  window.addEventListener('resize', updateWindowWidth)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateWindowWidth)
+})
+
+// Computed
+const isMobile = computed(() => window.innerWidth < 1024)
+
+// Event handlers
 const handleReset = () => {
   clearData()
   router.push('/')
@@ -70,6 +129,41 @@ const handleReset = () => {
 
 const goHome = () => {
   router.push('/')
+}
+
+const handleMessageComplete = (messageIndex: number) => {
+  // Update context for the completed message
+  updateCurrentMessageContext(messageIndex)
+}
+
+const handleMessageHasContext = ({ messageIndex, contextItems }: { messageIndex: number, contextItems: ContextItem[] }) => {
+  // This event is emitted when a message with context becomes visible
+  console.log(`Message ${messageIndex} has ${contextItems.length} context items`)
+  updateCurrentMessageContext(messageIndex)
+}
+
+const handleCloseContextPanel = () => {
+  toggleContextPanel()
+}
+
+const handleDividerResize = (newTerminalWidth: number) => {
+  // Update the context panel width based on the new terminal width
+  const newContextPanelWidth = windowWidth.value - newTerminalWidth - 8 // 8px for divider
+  contextPanelWidth.value = Math.max(300, Math.min(800, newContextPanelWidth))
+  
+  // Update settings to persist the change
+  props.settings.contextPanelWidth = contextPanelWidth.value
+  
+  // Save to localStorage
+  localStorage.setItem('settings', JSON.stringify(props.settings))
+}
+
+const handleRetryContext = async () => {
+  // Retry context discovery
+  const urlParam = route.query.url as string
+  if (urlParam) {
+    await discoverContext(urlParam)
+  }
 }
 
 // Handle URL parameter loading
@@ -100,14 +194,14 @@ watch(error, (newError) => {
 
 <style scoped>
 .conversation-view {
-  height: 100vh;
+  height: calc(100vh - var(--footer-height));
   width: 100vw;
 }
 
 .loading-container,
 .error-container,
 .no-data-container {
-  height: 100vh;
+  height: calc(100vh - var(--footer-height));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -162,9 +256,40 @@ watch(error, (newError) => {
 }
 
 .conversation-container {
-  height: 100vh;
+  height: calc(100vh - var(--footer-height));
   width: 100vw;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  overflow: hidden;
+}
+
+.terminal-panel {
+  flex: 1;
+  min-width: 300px;
+  overflow: hidden;
+}
+
+/* Desktop layout with context panel */
+@media (min-width: 1024px) {
+  .conversation-container {
+    display: flex;
+    flex-direction: row;
+  }
+  
+  .terminal-panel {
+    flex: none; /* Don't flex when we have explicit width */
+  }
+}
+
+/* Mobile layout - stack vertically */
+@media (max-width: 1023px) {
+  .conversation-container {
+    flex-direction: column;
+  }
+  
+  .terminal-panel {
+    width: 100% !important;
+    flex: 1;
+  }
 }
 </style>

@@ -22,7 +22,7 @@
         <span v-else class="static-content">{{ message.content }}</span>
       </span>
       <span class="message-meta">
-        {{ message.type }}
+        {{ message.type }}{{ contextIndicator }}
       </span>
     </div>
   </div>
@@ -39,6 +39,7 @@ const props = defineProps<{
   isCurrent: boolean;
   settings: Settings;
   paused?: boolean;
+  contextCount?: number;
 }>();
 
 defineEmits<{
@@ -58,6 +59,15 @@ const messagePrefix = computed(() => {
     default:
       return "?";
   }
+});
+
+const contextIndicator = computed(() => {
+  if (!props.contextCount || props.contextCount === 0) {
+    return '';
+  }
+  
+  const indicator = ' | [*]';
+  return props.contextCount > 1 ? ` | [*${props.contextCount}]` : indicator;
 });
 
 const getAnimationSpeed = () => {

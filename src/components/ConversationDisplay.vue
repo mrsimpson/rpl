@@ -25,25 +25,31 @@
             >
           </div>
           <div class="metadata-info">
-            Messages: {{ conversationData.messages.length }} | Format:
-            {{ conversationData.metadata.format }} |
+            Format: {{ conversationData.metadata.format }} |
             {{ formatDate(conversationData.metadata.timestamp) }}
           </div>
         </div>
 
         <div class="messages-container" ref="messagesContainer">
-          <MessageRenderer
+          <div 
             v-for="(message, index) in visibleMessages"
             :key="message.id"
-            :message="message"
-            :is-current="index === currentMessageIndex && (
-              (conversationState === 'agent_typing' && message.type !== 'human') ||
-              (conversationState === 'user_typing' && message.type === 'human')
-            )"
-            :settings="settings"
-            :paused="!isPlaying"
-            @animation-complete="onMessageComplete"
-          />
+            class="message-wrapper"
+            :class="{ 'has-context': hasContextForMessage(index) }"
+          >
+            <MessageRenderer
+              :message="message"
+              :is-current="index === currentMessageIndex && (
+                (conversationState === 'agent_typing' && message.type !== 'human') ||
+                (conversationState === 'user_typing' && message.type === 'human')
+              )"
+              :settings="settings"
+              :paused="!isPlaying"
+              :context-count="getContextForMessage(index).length"
+              @animation-complete="onMessageComplete"
+            />
+            
+          </div>
 
           <!-- Ghost preview of next user message -->
           <div v-if="showGhostMessage" class="ghost-preview">
@@ -60,24 +66,13 @@
         </div>
       </div>
     </div>
-
-    <!-- Fixed Progress Indicator -->
-    <div class="progress-container">
-      <ProgressIndicator
-        v-if="settings.showProgress"
-        :current="currentMessageIndex + 1"
-        :total="conversationData.messages.length"
-        :is-playing="isPlaying"
-      />
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import MessageRenderer from "./MessageRenderer.vue";
-import ProgressIndicator from "./ProgressIndicator.vue";
-import type { ConversationData, Settings } from "../types";
+import type { ConversationData, Settings, ContextItem } from "../types";
 
 const props = defineProps<{
   conversationData: ConversationData;
@@ -88,6 +83,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   reset: [];
+  messageComplete: [messageIndex: number];
+  messageHasContext: [data: { messageIndex: number; contextItems: any[] }];
 }>();
 
 const terminalContent = ref<HTMLElement>();
@@ -95,6 +92,44 @@ const messagesContainer = ref<HTMLElement>();
 const currentMessageIndex = ref(-1);
 const showCursor = ref(true);
 const isPlaying = ref(false);
+
+// Context functionality
+const contextMap = computed(() => {
+  const map = new Map<number, ContextItem[]>()
+  
+  if (props.contextItems) {
+    props.contextItems.forEach((item: ContextItem) => {
+      if (item.messageRange && Array.isArray(item.messageRange)) {
+        item.messageRange.forEach(messageIndex => {
+          if (typeof messageIndex === 'number' && messageIndex > 0) {
+            if (!map.has(messageIndex)) {
+              map.set(messageIndex, [])
+            }
+            map.get(messageIndex)!.push(item)
+          }
+        })
+      }
+    })
+  }
+  
+  return map
+})
+
+const getContextForMessage = (messageIndex: number): ContextItem[] => {
+  // Convert 0-based message array index to 1-based context file numbering
+  return contextMap.value.get(messageIndex + 1) || []
+}
+
+const hasContextForMessage = (messageIndex: number): boolean => {
+  return getContextForMessage(messageIndex).length > 0
+}
+
+const checkAndEmitContext = (messageIndex: number) => {
+  const contextItems = getContextForMessage(messageIndex)
+  if (contextItems.length > 0) {
+    emit('messageHasContext', { messageIndex, contextItems })
+  }
+}
 
 // State machine for conversation flow
 type ConversationState = 'waiting_for_user' | 'user_typing' | 'agent_typing';
@@ -218,6 +253,10 @@ const processAgentMessages = () => {
 const restart = () => {
   currentMessageIndex.value = -1;
   conversationState.value = 'waiting_for_user';
+  
+  // Clear current message context and hide context panel
+  emit('messageHasContext', { messageIndex: -1, contextItems: [] });
+  
   initializeConversation();
 };
 
@@ -243,6 +282,12 @@ const initializeConversation = () => {
 
 const onMessageComplete = () => {
   console.log('Message animation complete, state:', conversationState.value, 'isPlaying:', isPlaying.value);
+  
+  // Emit message completion event for context system
+  emit('messageComplete', currentMessageIndex.value);
+  
+  // Check and emit context for the completed message
+  checkAndEmitContext(currentMessageIndex.value);
   
   if (conversationState.value === 'agent_typing') {
     if (isPlaying.value) {
@@ -424,6 +469,16 @@ watch(isPlaying, (newValue) => {
     detail: { isPlaying: newValue }
   }))
 })
+
+// Emit message counter updates for footer
+watch(currentMessageIndex, (newValue) => {
+  window.dispatchEvent(new CustomEvent('message-counter-update', {
+    detail: { 
+      current: newValue + 1, 
+      total: props.conversationData.messages.length 
+    }
+  }))
+}, { immediate: true })
 </script>
 
 <style scoped>
@@ -434,8 +489,8 @@ watch(isPlaying, (newValue) => {
   border-radius: var(--window-border-radius);
   overflow: hidden;
   box-shadow: var(--window-shadow);
-  height: 100vh;
-  max-height: 100vh;
+  height: 100%;
+  max-height: 100%;
 }
 
 /* Window Styles */
@@ -675,6 +730,48 @@ watch(isPlaying, (newValue) => {
 
 .ghost-content {
   margin-left: var(--spacing-1);
+}
+
+/* Context indicators */
+.message-wrapper {
+  position: relative;
+}
+
+.message-wrapper.has-context {
+  border-left: 2px solid var(--terminal-accent, #00ff41);
+  padding-left: 8px;
+  margin-left: -10px;
+}
+
+.context-indicator {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--terminal-bg);
+  border: 1px solid var(--terminal-accent, #00ff41);
+  border-radius: 12px;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  color: var(--terminal-accent, #00ff41);
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.context-indicator:hover {
+  opacity: 1;
+}
+
+.context-badge {
+  font-weight: bold;
+  min-width: 12px;
+  text-align: center;
+}
+
+.context-icon {
+  font-size: 0.7rem;
 }
 
 .progress-container {

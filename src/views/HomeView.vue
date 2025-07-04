@@ -40,7 +40,7 @@ const handleLoadConversation = async (event: LoadConversationEvent) => {
 
 <style scoped>
 .home-view {
-  height: 100vh;
+  height: calc(100vh - var(--footer-height));
   display: flex;
   align-items: center;
   justify-content: center;

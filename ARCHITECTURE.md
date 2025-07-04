@@ -32,7 +32,6 @@ graph TB
     subgraph "Component Layer"
         Message[MessageRenderer.vue]
         Typewriter[TypewriterText.vue]
-        Progress[ProgressIndicator.vue]
     end
     
     subgraph "Adapter Layer"

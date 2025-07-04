@@ -1,0 +1,11 @@
+> Hello! Can you help me create a simple web page?
+
+I'd be happy to help you create a simple web page! Let me show you a basic HTML structure.
+
+> That looks great! Can you also add some CSS styling?
+
+Absolutely! I'll add some CSS to make it look better.
+
+> Perfect! Can you also show me how to add some JavaScript?
+
+Sure! Let me add some interactive JavaScript to the page.

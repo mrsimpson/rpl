@@ -87,14 +87,15 @@ import { ref, computed } from 'vue'
 import { LoaderIcon, DownloadIcon, PlayIcon, FolderIcon } from 'lucide-vue-next'
 import { TextFormatParser } from '../parsers/TextFormatParser'
 import { JsonFormatParser } from '../parsers/JsonFormatParser'
+import { createContextItem } from '../utils/contextUtils'
 import ToastNotification from './ToastNotification.vue'
-import type { ConversationData } from '../types'
+import type { ConversationData, ContextItem } from '../types'
 
 const emit = defineEmits<{
   loadConversation: [event: {
     data: ConversationData;
     source: string;
-    contextItems?: any[];
+    contextItems?: ContextItem[];
   }]
 }>()
 
@@ -135,16 +136,25 @@ const selectFolder = async () => {
           
           const parser = name.endsWith('.json') ? new JsonFormatParser() : new TextFormatParser()
           conversationData = await parser.parse(content)
-        } else if (name.match(/\.(jpg|jpeg|png|gif|mp4|mov|txt|js|py|md)$/i)) {
+        } else if (name.match(/\.(jpg|jpeg|png|gif|mp4|mov|txt|js|py|md|css|html)$/i)) {
           // Found potential context file
           const file = await handle.getFile()
           const url = URL.createObjectURL(file)
-          contextItems.push({
+          
+          // Create proper ContextItem using utility function
+          const contextItem = createContextItem(
             name,
             url,
-            type: file.type || 'application/octet-stream',
-            size: file.size
-          })
+            {
+              size: file.size,
+              mimeType: file.type || 'application/octet-stream'
+            }
+          )
+          
+          // Only add if it has valid message range
+          if (contextItem.messageRange.length > 0) {
+            contextItems.push(contextItem)
+          }
         }
       }
     }

@@ -85,6 +85,25 @@
       </div>
     </div>
 
+    <!-- Context Panel Settings -->
+    <div class="setting-group">
+      <h3>Context Panel</h3>
+      <div class="setting-item">
+        <label>
+          <span>Panel Width (pixels)</span>
+          <input
+            type="range"
+            min="300"
+            max="800"
+            step="50"
+            :value="settings.contextPanelWidth || 400"
+            @input="updateSetting('contextPanelWidth', parseInt(($event.target as HTMLInputElement).value))"
+          />
+          <span class="range-value">{{ settings.contextPanelWidth || 400 }}px</span>
+        </label>
+      </div>
+    </div>
+
     <div class="setting-group">
       <button @click="resetSettings" class="reset-btn">
         Reset to Defaults
@@ -116,7 +135,8 @@ const resetSettings = () => {
     windowStyle: 'macos',
     showProgress: true,
     showGhostPreview: true,
-    enableSounds: false
+    enableSounds: false,
+    contextPanelWidth: 400
   })
 }
 </script>
