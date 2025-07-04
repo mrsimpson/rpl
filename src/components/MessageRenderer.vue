@@ -22,6 +22,7 @@
         <span v-else class="static-content">{{ message.content }}</span>
       </span>
       <span class="message-meta">
+        <span> {{ message.id }} | </span>
         {{ message.type }}{{ contextIndicator }}
       </span>
     </div>
@@ -63,10 +64,10 @@ const messagePrefix = computed(() => {
 
 const contextIndicator = computed(() => {
   if (!props.contextCount || props.contextCount === 0) {
-    return '';
+    return "";
   }
-  
-  const indicator = ' | [*]';
+
+  const indicator = " | [*]";
   return props.contextCount > 1 ? ` | [*${props.contextCount}]` : indicator;
 });
 
@@ -78,8 +79,6 @@ const getAnimationSpeed = () => {
 </script>
 
 <style scoped>
-
-
 /* Message Styles */
 .message {
   margin-bottom: var(--spacing-3);
