@@ -36,9 +36,6 @@
         </template>
       </AppFooter>
     </main>
-
-    <!-- Hackathon Badge -->
-    <HackathonBadge />
   </div>
 </template>
 
@@ -46,7 +43,6 @@
 import { ref, reactive, onMounted } from "vue";
 import SettingsPanel from "./components/SettingsPanel.vue";
 import AppFooter from "./components/AppFooter.vue";
-import HackathonBadge from "./components/HackathonBadge.vue";
 import type { Settings } from "./types";
 
 const isDarkMode = ref(true);

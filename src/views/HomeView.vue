@@ -4,6 +4,9 @@
       <SourceInput @load-conversation="handleLoadConversation" />
     </div>
   </div>
+
+    <!-- Hackathon Badge -->
+    <HackathonBadge />
 </template>
 
 <script setup lang="ts">
@@ -11,6 +14,7 @@ import { useRouter } from 'vue-router'
 import SourceInput from '../components/SourceInput.vue'
 import { useConversationState } from '../composables/useConversationState'
 import type { ConversationData } from '../types'
+import HackathonBadge from '../components/HackathonBadge.vue'
 
 const router = useRouter()
 const { setLocalData } = useConversationState()
