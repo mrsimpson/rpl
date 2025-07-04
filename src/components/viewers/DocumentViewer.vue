@@ -16,21 +16,33 @@
           <div class="loading-spinner"></div>
           <p>Loading document...</p>
         </div>
+        
+        <!-- Markdown Renderer for markdown files -->
+        <MarkdownRenderer
+          v-else-if="isMarkdown"
+          :key="`${item.id}-${textContent.length}`"
+          :content="textContent"
+          :filename="item.filename"
+        />
+        
+        <!-- Plain text for non-markdown files -->
         <pre v-else class="text-pre">{{ textContent }}</pre>
       </div>
     </div>
     
     <div class="document-info">
       <span class="filename">{{ item.filename }}</span>
-      <span class="type">{{ item.type.toUpperCase() }}</span>
+      <span class="type">{{ getDisplayType() }}</span>
+      <span v-if="isMarkdown" class="markdown-badge">MD</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import type { ContextItem } from '../../types'
 import { contextPrefetcher } from '../../services/ContextPrefetcher'
+import MarkdownRenderer from './MarkdownRenderer.vue'
 
 interface Props {
   item: ContextItem
@@ -52,6 +64,40 @@ const isPdf = computed(() => {
   return props.item.filename.toLowerCase().endsWith('.pdf') ||
          props.item.metadata?.mimeType === 'application/pdf'
 })
+
+const isMarkdown = computed(() => {
+  if (!textContent.value) return false
+  
+  // Check file extension first
+  const filename = props.item.filename.toLowerCase()
+  if (filename.endsWith('.md') || filename.endsWith('.markdown') || filename.endsWith('.mdown')) {
+    return true
+  }
+  
+  // Check content for markdown patterns
+  const content = textContent.value.trim()
+  const markdownPatterns = [
+    /^#{1,6}\s+.+$/m,           // Headers
+    /^\*\s+.+$/m,              // Unordered lists
+    /^\d+\.\s+.+$/m,           // Ordered lists
+    /\*\*[^*]+\*\*/,           // Bold text
+    /\*[^*]+\*/,               // Italic text
+    /`[^`]+`/,                 // Inline code
+    /^```[\s\S]*?```$/m,       // Code blocks
+    /^\|.+\|$/m,               // Tables
+    /^\[.+\]\(.+\)$/m,         // Links
+    /^>\s+.+$/m                // Blockquotes
+  ]
+  
+  return markdownPatterns.some(pattern => pattern.test(content))
+})
+
+const getDisplayType = () => {
+  if (isMarkdown.value) {
+    return 'MARKDOWN'
+  }
+  return props.item.type.toUpperCase()
+}
 
 const loadTextContent = async () => {
   if (isPdf.value) return
@@ -97,6 +143,17 @@ const loadTextContent = async () => {
 const handleError = () => {
   emit('loadError', 'Failed to load PDF')
 }
+
+// Watch for item changes and reload content
+watch(() => props.item, (newItem, oldItem) => {
+  if (newItem?.id !== oldItem?.id) {
+    // Clear previous content when switching items
+    textContent.value = ''
+    if (!isPdf.value) {
+      loadTextContent()
+    }
+  }
+}, { immediate: false })
 
 onMounted(() => {
   if (!isPdf.value) {
@@ -174,14 +231,26 @@ onMounted(() => {
   align-items: center;
   font-size: 0.8rem;
   color: var(--terminal-text);
+  gap: 1rem;
 }
 
 .filename {
   font-weight: bold;
+  flex: 1;
 }
 
 .type {
   opacity: 0.7;
   font-size: 0.7rem;
+}
+
+.markdown-badge {
+  background: var(--terminal-text);
+  color: var(--terminal-bg);
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.6rem;
+  font-weight: bold;
+  letter-spacing: 0.5px;
 }
 </style>

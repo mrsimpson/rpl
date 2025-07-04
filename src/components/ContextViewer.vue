@@ -9,7 +9,7 @@
     </div>
 
     <!-- Content Viewers -->
-    <div v-else-if="item" class="viewer-content">
+    <div v-else-if="item" class="viewer-content" :key="item.id">
       <!-- Image Viewer -->
       <ImageViewer
         v-if="item.type === 'image'"
