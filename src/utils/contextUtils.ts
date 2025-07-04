@@ -182,3 +182,54 @@ export function groupContextByMessage(items: ContextItem[]): Map<number, Context
   
   return map
 }
+
+/**
+ * Generic interface for file items (used by multiple adapters)
+ */
+export interface FileItem {
+  name: string
+  path: string
+  contentType?: string
+}
+
+/**
+ * Filter files by supported extensions
+ */
+export function filterFilesByType(files: FileItem[], supportedExtensions: string[]): FileItem[] {
+  return files.filter(file => 
+    supportedExtensions.some(ext => file.name.toLowerCase().endsWith(ext.toLowerCase()))
+  )
+}
+
+/**
+ * Filter out noise files (common repository files that aren't context)
+ */
+export function filterOutNoiseFiles(files: FileItem[], noisePatterns: string[]): FileItem[] {
+  return files.filter(file => 
+    !noisePatterns.some(pattern => 
+      file.name.includes(pattern) || file.path.includes(pattern)
+    )
+  )
+}
+
+/**
+ * Find conversation file with priority logic
+ */
+export function prioritizeConversationFiles(files: FileItem[]): FileItem | null {
+  const priorities = [
+    'conversation.json',
+    'conversation.txt',
+    /\.json$/,
+    /\.txt$/
+  ]
+  
+  for (const priority of priorities) {
+    const found = files.find(file => 
+      typeof priority === 'string' 
+        ? file.name === priority
+        : priority.test(file.name)
+    )
+    if (found) return found
+  }
+  return null
+}

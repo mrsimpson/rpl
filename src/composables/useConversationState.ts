@@ -4,6 +4,7 @@ import { TextFormatParser } from '../parsers/TextFormatParser'
 import { JsonFormatParser } from '../parsers/JsonFormatParser'
 import { FileSourceAdapter } from '../adapters/FileSourceAdapter'
 import { GistSourceAdapter } from '../adapters/GistSourceAdapter'
+import { GitHubRepoSourceAdapter } from '../adapters/GitHubRepoSourceAdapter'
 import { contextPrefetcher } from '../services/ContextPrefetcher'
 
 // Global state for conversation management
@@ -110,6 +111,8 @@ export function useConversationState() {
       let adapter
       if (source.includes('gist.github.com') || source.includes('gist.githubusercontent.com')) {
         adapter = new GistSourceAdapter()
+      } else if (source.includes('github.com') && source.includes('/tree/')) {
+        adapter = new GitHubRepoSourceAdapter()
       } else {
         adapter = new FileSourceAdapter()
       }
@@ -182,6 +185,8 @@ export function useConversationState() {
       // Select appropriate source adapter
       const sourceAdapter = url.includes('gist.github.com') || url.includes('gist.githubusercontent.com')
         ? new GistSourceAdapter()
+        : url.includes('github.com') && url.includes('/tree/')
+        ? new GitHubRepoSourceAdapter()
         : new FileSourceAdapter()
 
       // Fetch content

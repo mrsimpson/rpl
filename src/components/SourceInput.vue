@@ -12,7 +12,7 @@
           id="source-url"
           v-model="sourceUrl"
           type="url"
-          placeholder="https://gist.github.com/... or file URL"
+          placeholder="GitHub repository folder, gist, or file URL"
           class="source-url-input"
           :disabled="loading"
         />
