@@ -1,5 +1,5 @@
 <template>
-  <div class="app" :class="{ 'dark-mode': isDarkMode }">
+  <div class="app" :class="themeClasses">
     <main class="main-container">
       <!-- Router view for different pages -->
       <router-view :settings="settings" />
@@ -10,7 +10,7 @@
         class="settings-dialog-overlay"
         @click="closeSettings"
       >
-        <div class="settings-dialog" @click.stop>
+        <div class="settings-dialog" :class="[themeClasses, windowStyleClasses]" @click.stop>
           <div class="settings-header">
             <h3>Settings</h3>
             <button @click="closeSettings" class="close-btn">×</button>
@@ -27,9 +27,8 @@
       <!-- App Footer with slot for page-specific content -->
       <AppFooter
         :show-settings="showSettings"
-        :is-dark-mode="isDarkMode"
         @toggle-settings="toggleSettings"
-        @toggle-theme="toggleDarkMode"
+        @toggle-theme="toggleTheme"
       >
         <template #main>
           <router-view name="footer" :settings="settings" />
@@ -43,26 +42,30 @@
 import { ref, reactive, onMounted } from "vue";
 import SettingsPanel from "./components/SettingsPanel.vue";
 import AppFooter from "./components/AppFooter.vue";
+import { useTheme, ensureThemeInitialized } from "./composables/useTheme";
+import { useOSStyle, ensureOSStyleInitialized } from "./composables/useOSStyle";
 import type { Settings } from "./types";
 
-const isDarkMode = ref(true);
+// Initialize theme and OS detection systems
+ensureThemeInitialized();
+ensureOSStyleInitialized();
+
+// Use theme and OS style composables
+const { themeClasses, toggleTheme } = useTheme();
+const { windowStyleClasses } = useOSStyle();
+
 const showSettings = ref(false);
 
 const settings = reactive<Settings>({
   humanAnimationSpeed: 50,
   agentAnimationSpeed: 30,
-  theme: "matrix",
-  windowStyle: "macos",
+  terminalTheme: "matrix",        // NEW: Simplified terminal theme
+  windowStyle: "auto",            // NEW: Auto-detect OS style
   showProgress: true,
   showGhostPreview: true,
   enableSounds: false,
-  contextPanelWidth: 400, // Default context panel width in pixels
+  contextPanelWidth: 400,
 });
-
-const toggleDarkMode = () => {
-  isDarkMode.value = !isDarkMode.value;
-  localStorage.setItem("darkMode", String(isDarkMode.value));
-};
 
 const toggleSettings = () => {
   showSettings.value = !showSettings.value;
@@ -83,27 +86,46 @@ onMounted(() => {
   if (savedSettings) {
     try {
       const parsed = JSON.parse(savedSettings);
-      Object.assign(settings, parsed);
+      // Only apply valid settings, ignore old 'theme' field
+      const validSettings: Partial<Settings> = {
+        humanAnimationSpeed: parsed.humanAnimationSpeed,
+        agentAnimationSpeed: parsed.agentAnimationSpeed,
+        terminalTheme: parsed.terminalTheme || "matrix",
+        windowStyle: parsed.windowStyle || "auto",
+        showProgress: parsed.showProgress,
+        showGhostPreview: parsed.showGhostPreview,
+        enableSounds: parsed.enableSounds,
+        contextPanelWidth: parsed.contextPanelWidth,
+        showContextPanel: parsed.showContextPanel,
+        pauseOnContext: parsed.pauseOnContext,
+        autoShowContext: parsed.autoShowContext,
+      };
+      Object.assign(settings, validSettings);
     } catch (e) {
       console.warn("Failed to parse saved settings:", e);
     }
-  }
-
-  const savedDarkMode = localStorage.getItem("darkMode");
-  if (savedDarkMode !== null) {
-    isDarkMode.value = savedDarkMode === "true";
   }
 });
 </script>
 
 <style>
-/* Global styles remain the same */
+/* Minimal global styles - theme-aware components handle their own styling */
 .app {
   min-height: 100vh;
-  background: var(--terminal-bg);
-  color: var(--terminal-text);
   font-family: 'Fira Code', 'Monaco', 'Cascadia Code', 'Ubuntu Mono', monospace;
   transition: all 0.3s ease;
+}
+
+/* Light theme for app */
+.app.light {
+  background: #ffffff;
+  color: #000000;
+}
+
+/* Dark theme for app */
+.app.dark {
+  background: #1a1a1a;
+  color: #ffffff;
 }
 
 .main-container {
@@ -126,8 +148,7 @@ onMounted(() => {
 }
 
 .settings-dialog {
-  background: var(--terminal-bg);
-  border: 2px solid var(--terminal-text);
+  border: 2px solid;
   border-radius: 8px;
   width: 90%;
   max-width: 500px;
@@ -135,23 +156,59 @@ onMounted(() => {
   overflow: hidden;
 }
 
+/* Light theme for settings dialog */
+.settings-dialog.light {
+  background: #ffffff;
+  border-color: #e0e0e0;
+}
+
+/* Dark theme for settings dialog */
+.settings-dialog.dark {
+  background: #1a1a1a;
+  border-color: #404040;
+}
+
+/* OS-specific styling for settings dialog */
+.settings-dialog.macos {
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+
+.settings-dialog.windows {
+  border-radius: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.settings-dialog.linux {
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
 .settings-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  border-bottom: 1px solid var(--terminal-text);
+  border-bottom: 1px solid;
+}
+
+.settings-header.light {
+  background: #f8f9fa;
+  border-bottom-color: #e0e0e0;
+}
+
+.settings-header.dark {
+  background: #2d2d2d;
+  border-bottom-color: #404040;
 }
 
 .settings-header h3 {
   margin: 0;
-  color: var(--terminal-text);
 }
 
 .close-btn {
   background: transparent;
   border: none;
-  color: var(--terminal-text);
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0;
@@ -160,12 +217,28 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.light .close-btn {
+  color: #000000;
+}
+
+.dark .close-btn {
+  color: #ffffff;
 }
 
 .close-btn:hover {
-  background: var(--terminal-text);
-  color: var(--terminal-bg);
-  border-radius: 50%;
+  transform: scale(1.1);
+}
+
+.light .close-btn:hover {
+  background: #e0e0e0;
+}
+
+.dark .close-btn:hover {
+  background: #404040;
 }
 
 .settings-content {
@@ -173,12 +246,4 @@ onMounted(() => {
   max-height: 60vh;
   overflow-y: auto;
 }
-
-/* Dark mode styles */
-.dark-mode {
-  --terminal-bg: #000000;
-  --terminal-text: #00ff00;
-}
-
-/* Theme variables are set in style.css */
 </style>

@@ -52,6 +52,7 @@ defineEmits<{
   display: flex;
   align-items: center;
   gap: 1rem;
+  font-size: 0.7rem;
 }
 
 .keyboard-hints kbd {
@@ -59,7 +60,6 @@ defineEmits<{
   color: var(--terminal-bg);
   padding: 0.2rem 0.4rem;
   border-radius: 3px;
-  font-size: 0.7rem;
   font-weight: bold;
 }
 
@@ -67,12 +67,12 @@ defineEmits<{
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-left: auto;
+  margin-left: 3rem;
 }
 
 .playback-btn {
   background: transparent;
-  border: 1px solid var(--terminal-text);
+  border: 1px solid #e0e0e0;;
   color: var(--terminal-text);
   padding: 0.3rem 0.6rem;
   border-radius: 4px;
