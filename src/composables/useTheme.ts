@@ -1,4 +1,4 @@
-import { ref, computed, onMounted, readonly } from 'vue'
+import { ref, computed, readonly } from 'vue'
 
 // Global state for theme management
 const isSystemDark = ref(false)

@@ -38,8 +38,9 @@ interface Emits {
   (e: 'toggleTheme'): void
 }
 
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+
+defineProps<Props>()
+defineEmits<Emits>()
 
 // Use theme composable
 const { themeClasses, isDark } = useTheme()

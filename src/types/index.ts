@@ -1,5 +1,8 @@
 import type { TerminalTheme, WindowStyle, TerminalThemeDefinition } from './theme'
 
+// Re-export theme types
+export type { TerminalTheme, WindowStyle, TerminalThemeDefinition }
+
 export interface Message {
   id: string
   type: 'human' | 'agent' | 'tool_call' | 'system'

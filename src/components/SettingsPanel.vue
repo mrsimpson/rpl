@@ -33,7 +33,7 @@
 
     <div class="setting-group">
       <label>Terminal Theme</label>
-      <select :value="settings.terminalTheme" @change="updateSetting('terminalTheme', ($event.target as HTMLSelectElement).value)">
+      <select :value="settings.terminalTheme" @change="updateSetting('terminalTheme', ($event.target as HTMLSelectElement).value as TerminalTheme)">
         <option value="matrix">Matrix Green</option>
         <option value="high-contrast">High Contrast</option>
       </select>
@@ -41,7 +41,7 @@
 
     <div class="setting-group">
       <label>Window Style</label>
-      <select :value="settings.windowStyle" @change="updateSetting('windowStyle', ($event.target as HTMLSelectElement).value)">
+      <select :value="settings.windowStyle" @change="updateSetting('windowStyle', ($event.target as HTMLSelectElement).value as WindowStyle)">
         <option value="auto">Auto-detect</option>
         <option value="macos">macOS</option>
         <option value="linux">Linux</option>
@@ -103,7 +103,11 @@
 
 <script setup lang="ts">
 import { useTheme } from '../composables/useTheme'
-import type { Settings } from '../types'
+import type { Settings, TerminalTheme, WindowStyle } from '../types'
+
+interface Props {
+  settings: Settings
+}
 
 interface Props {
   settings: Settings
@@ -118,6 +122,8 @@ const emit = defineEmits<Emits>()
 
 // Use theme composable
 const { themeClasses, isDark, toggleTheme } = useTheme()
+void props;
+// Props and emit are used in template and methods
 
 const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K]) => {
   emit('update-settings', { [key]: value })
