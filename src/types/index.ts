@@ -1,3 +1,5 @@
+import type { TerminalTheme, WindowStyle, TerminalThemeDefinition } from './theme'
+
 export interface Message {
   id: string
   type: 'human' | 'agent' | 'tool_call' | 'system'
@@ -35,8 +37,8 @@ export interface ContextItem {
 export interface Settings {
   humanAnimationSpeed: number
   agentAnimationSpeed: number
-  theme: 'matrix' | 'amber' | 'blue' | 'hacker' | 'light'
-  windowStyle: 'macos' | 'linux' | 'windows'
+  terminalTheme: TerminalTheme  // NEW: Simplified terminal theme
+  windowStyle: WindowStyle      // NEW: Enhanced window styling with auto-detect
   showProgress: boolean
   showGhostPreview: boolean
   enableSounds: boolean
@@ -45,6 +47,8 @@ export interface Settings {
   contextPanelWidth?: number
   pauseOnContext?: boolean
   autoShowContext?: boolean
+  // REMOVED: theme (old terminal theme system)
+  // Light/dark mode handled by useTheme composable, not in settings
 }
 
 export interface SourceAdapter {

@@ -1,5 +1,5 @@
 <template>
-  <div class="application-window" :class="`window-style-${windowStyle}`">
+  <div class="application-window" :class="[themeClasses, windowStyleClasses]">
     <!-- Window Header -->
     <div class="window-header">
       <div class="window-controls">
@@ -25,22 +25,30 @@
 </template>
 
 <script setup lang="ts">
+import { useTheme } from '../composables/useTheme'
+import { useOSStyle } from '../composables/useOSStyle'
+import type { WindowStyle } from '../types/theme'
+
 interface Props {
   title: string
-  windowStyle?: 'macos' | 'linux' | 'windows'
+  windowStyle?: WindowStyle
   showMinimize?: boolean
   showMaximize?: boolean
   closeButtonTitle?: string
   contentClass?: string
 }
 
-withDefaults(defineProps<Props>(), {
-  windowStyle: 'macos',
+const props = withDefaults(defineProps<Props>(), {
+  windowStyle: 'auto',
   showMinimize: false,
   showMaximize: false,
   closeButtonTitle: 'Close',
   contentClass: ''
 })
+
+// Use theme composables
+const { themeClasses } = useTheme()
+const { windowStyleClasses } = useOSStyle(props.windowStyle)
 
 defineEmits<{
   close: []
@@ -51,215 +59,194 @@ defineEmits<{
 .application-window {
   display: flex;
   flex-direction: column;
-  background-color: var(--window-bg);
-  border-radius: var(--window-border-radius);
-  overflow: hidden;
-  box-shadow: var(--window-shadow);
   height: 100%;
-  border: 1px solid var(--window-border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-/* Window Styles */
-.window-style-macos {
-  --window-bg: #2d2d2d;
-  --window-border-radius: 12px;
-  --window-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-  --window-border-color: rgba(255, 255, 255, 0.1);
-  --control-size: 12px;
-  --control-spacing: 8px;
+/* Light theme for window */
+.light.application-window {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
 }
 
-.window-style-linux {
-  --window-bg: #1e1e1e;
-  --window-border-radius: 4px;
-  --window-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  --window-border-color: rgba(255, 255, 255, 0.15);
-  --control-size: 14px;
-  --control-spacing: 4px;
+/* Dark theme for window */
+.dark.application-window {
+  background: #1a1a1a;
+  border: 1px solid #404040;
 }
 
-.window-style-windows {
-  --window-bg: #0c0c0c;
-  --window-border-radius: 8px;
-  --window-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
-  --window-border-color: rgba(255, 255, 255, 0.12);
-  --control-size: 16px;
-  --control-spacing: 2px;
+/* OS-specific window styling */
+.macos.application-window {
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+
+.windows.application-window {
+  border-radius: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.linux.application-window {
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .window-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background-color: rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  min-height: 40px;
-  flex-shrink: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid;
+  min-height: 44px;
+}
+
+/* Light theme for window header */
+.light .window-header {
+  background: #f8f9fa;
+  border-bottom-color: #e0e0e0;
+  color: #000000;
+}
+
+/* Dark theme for window header */
+.dark .window-header {
+  background: #2d2d2d;
+  border-bottom-color: #404040;
+  color: #ffffff;
 }
 
 .window-controls {
   display: flex;
-  gap: var(--control-spacing);
+  gap: 8px;
+  margin-right: 16px;
   align-items: center;
-  min-width: 60px;
 }
 
 .control-button {
-  width: var(--control-size);
-  height: var(--control-size);
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  border: none;
   cursor: pointer;
   transition: all 0.2s ease;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
 }
 
-.control-button:hover {
-  transform: scale(1.1);
-}
-
-/* macOS Style Controls */
-.window-style-macos .control-button.close {
+/* macOS style controls */
+.macos .control-button.close {
   background-color: #ff5f57;
 }
 
-.window-style-macos .control-button.close:hover {
+.macos .control-button.close:hover {
   background-color: #ff3b30;
 }
 
-.window-style-macos .control-button.close::after {
+.macos .control-button.close::after {
   content: '×';
   color: #000;
-  font-size: 10px;
-  font-weight: bold;
-  opacity: 0;
-  transition: opacity 0.2s ease;
 }
 
-.window-style-macos .control-button.close:hover::after {
-  opacity: 1;
-}
-
-.window-style-macos .control-button.minimize {
+.macos .control-button.minimize {
   background-color: #ffbd2e;
 }
 
-.window-style-macos .control-button.minimize:hover {
-  background-color: #ffaa00;
+.macos .control-button.minimize::after {
+  content: '−';
+  color: #000;
 }
 
-.window-style-macos .control-button.maximize {
+.macos .control-button.maximize {
   background-color: #28ca42;
 }
 
-.window-style-macos .control-button.maximize:hover {
-  background-color: #20a034;
+.macos .control-button.maximize::after {
+  content: '+';
+  color: #000;
 }
 
-/* Linux Style Controls */
-.window-style-linux .control-button {
+/* Linux/Windows style controls */
+.linux .control-button,
+.windows .control-button {
   background-color: #666;
+  color: #fff;
+}
+
+.linux .control-button {
   border-radius: 2px;
 }
 
-.window-style-linux .control-button:hover {
-  background-color: #777;
-}
-
-.window-style-linux .control-button.close {
-  background-color: #cc4125;
-}
-
-.window-style-linux .control-button.close:hover {
-  background-color: #d73502;
-}
-
-.window-style-linux .control-button.close::after {
-  content: '×';
-  color: #fff;
-  font-size: 12px;
-  font-weight: bold;
-}
-
-/* Windows Style Controls */
-.window-style-windows .control-button {
-  background-color: #666;
+.windows .control-button {
   border-radius: 0;
 }
 
-.window-style-windows .control-button:hover {
-  background-color: #777;
-}
-
-.window-style-windows .control-button.close {
-  background-color: #e81123;
-}
-
-.window-style-windows .control-button.close:hover {
-  background-color: #f1707a;
-}
-
-.window-style-windows .control-button.close::after {
+.linux .control-button.close::after,
+.windows .control-button.close::after {
   content: '×';
-  color: #fff;
-  font-size: 14px;
-  font-weight: bold;
+}
+
+.linux .control-button.minimize::after,
+.windows .control-button.minimize::after {
+  content: '−';
+}
+
+.linux .control-button.maximize::after,
+.windows .control-button.maximize::after {
+  content: '□';
 }
 
 .window-title {
-  font-size: 14px;
-  color: var(--terminal-text, #fff);
-  font-weight: 500;
   flex: 1;
   text-align: center;
-  user-select: none;
+  font-weight: 500;
+  font-size: 14px;
 }
 
 .window-actions {
-  min-width: 60px;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: 8px;
 }
 
 .window-content {
   flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  overflow: auto;
+  padding: 16px;
 }
 
-/* Theme-sensitive text color */
-[data-theme="matrix"] .window-title {
-  color: #00ff00;
+/* Light theme for content */
+.light .window-content {
+  background: #ffffff;
+  color: #000000;
 }
 
-[data-theme="amber"] .window-title {
-  color: #ffb000;
+/* Dark theme for content */
+.dark .window-content {
+  background: #1a1a1a;
+  color: #ffffff;
 }
 
-[data-theme="blue"] .window-title {
-  color: #00aaff;
-}
-
-[data-theme="hacker"] .window-title {
-  color: #00ff41;
-}
-
-[data-theme="light"] .window-title {
-  color: #24292e;
-}
-
-[data-theme="light"] .application-window {
-  --window-bg: #ffffff;
-  --window-border-color: rgba(0, 0, 0, 0.1);
-}
-
-[data-theme="light"] .window-header {
-  background-color: rgba(0, 0, 0, 0.05);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+/* Responsive design */
+@media (max-width: 768px) {
+  .application-window {
+    border-radius: 0;
+    height: 100vh;
+  }
+  
+  .window-header {
+    padding: 8px 12px;
+    min-height: 40px;
+  }
+  
+  .window-title {
+    font-size: 13px;
+  }
+  
+  .window-content {
+    padding: 12px;
+  }
 }
 </style>

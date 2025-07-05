@@ -1,5 +1,5 @@
 <template>
-  <div class="terminal-window" :class="`window-style-${settings.windowStyle}`">
+  <div class="terminal-window" :class="[themeClasses, windowStyleClasses]">
     <!-- Terminal Window Header -->
     <div class="window-header">
       <div class="window-controls">
@@ -14,7 +14,10 @@
     </div>
 
     <!-- Terminal Content -->
-    <div class="terminal" :class="`theme-${settings.theme}`">
+    <div 
+      class="terminal" 
+      :style="terminalThemeStyles"
+    >
       <div class="terminal-content" ref="terminalContent">
         <div class="conversation-metadata">
           <div class="metadata-line">
@@ -72,7 +75,33 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import MessageRenderer from "./MessageRenderer.vue";
-import type { ConversationData, Settings, ContextItem } from "../types";
+import { useTheme } from '../composables/useTheme'
+import { useOSStyle } from '../composables/useOSStyle'
+import type { ConversationData, Settings, ContextItem, TerminalThemeDefinition } from "../types";
+
+// Terminal theme definitions - local to this component
+const terminalThemes: Record<string, TerminalThemeDefinition> = {
+  matrix: {
+    name: 'matrix',
+    colors: {
+      background: '#0d1117',
+      text: '#00ff41',
+      accent: '#00cc33',
+      dim: '#008822',
+      cursor: '#00ff41'
+    }
+  },
+  'high-contrast': {
+    name: 'high-contrast',
+    colors: {
+      background: '#000000',
+      text: '#ffffff',
+      accent: '#ffffff',
+      dim: '#cccccc',
+      cursor: '#ffffff'
+    }
+  }
+}
 
 const props = defineProps<{
   conversationData: ConversationData;
@@ -86,6 +115,64 @@ const emit = defineEmits<{
   messageComplete: [messageIndex: number];
   messageHasContext: [data: { messageIndex: number; contextItems: any[] }];
 }>();
+
+// Use theme composables
+const { themeClasses } = useTheme()
+
+// Make window style reactive to settings changes
+const windowStyleClasses = computed(() => {
+  const { windowStyleClasses: classes } = useOSStyle(props.settings.windowStyle)
+  return classes.value
+})
+
+// Terminal theme styling - now responsive to app light/dark mode
+const terminalThemeStyles = computed(() => {
+  const baseTheme = terminalThemes[props.settings.terminalTheme] || terminalThemes.matrix
+  const { isDark } = useTheme()
+  
+  // Adapt terminal theme colors based on app light/dark mode
+  let colors = { ...baseTheme.colors }
+  
+  if (props.settings.terminalTheme === 'high-contrast') {
+    // High contrast theme adapts to light/dark mode
+    if (isDark.value) {
+      colors = {
+        background: '#000000',
+        text: '#ffffff',
+        accent: '#ffffff',
+        dim: '#cccccc',
+        cursor: '#ffffff'
+      }
+    } else {
+      colors = {
+        background: '#ffffff',
+        text: '#000000',
+        accent: '#000000',
+        dim: '#666666',
+        cursor: '#000000'
+      }
+    }
+  } else if (props.settings.terminalTheme === 'matrix') {
+    // Matrix theme gets slightly different shades for light mode
+    if (!isDark.value) {
+      colors = {
+        background: '#f0f8f0', // Very light green background
+        text: '#006600',       // Darker green text
+        accent: '#004400',     // Even darker green accent
+        dim: '#008800',        // Medium green for dim text
+        cursor: '#006600'      // Dark green cursor
+      }
+    }
+  }
+  
+  return {
+    '--terminal-bg': colors.background,
+    '--terminal-text': colors.text,
+    '--terminal-accent': colors.accent,
+    '--terminal-dim': colors.dim,
+    '--terminal-cursor': colors.cursor,
+  }
+})
 
 const terminalContent = ref<HTMLElement>();
 const messagesContainer = ref<HTMLElement>();
@@ -530,43 +617,85 @@ watch(currentMessageIndex, (newValue) => {
 
 .window-controls {
   display: flex;
-  gap: var(--control-spacing);
+  gap: 8px;
+  margin-right: 16px;
   align-items: center;
 }
 
 .control-button {
-  width: var(--control-size);
-  height: var(--control-size);
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  border: none;
   cursor: pointer;
   transition: all 0.2s ease;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.window-style-macos .control-button.close {
-  background-color: #ff5f57;
-}
-
-.window-style-macos .control-button.close:hover {
-  background-color: #ff3b30;
-}
-
-.window-style-macos .control-button.close::after {
-  content: '×';
-  color: #000;
   font-size: 10px;
   font-weight: bold;
 }
 
-.window-style-macos .control-button.minimize {
+/* macOS style controls */
+.macos .control-button.close {
+  background-color: #ff5f57;
+}
+
+.macos .control-button.close:hover {
+  background-color: #ff3b30;
+}
+
+.macos .control-button.close::after {
+  content: '×';
+  color: #000;
+}
+
+.macos .control-button.minimize {
   background-color: #ffbd2e;
 }
 
-.window-style-macos .control-button.maximize {
+.macos .control-button.minimize::after {
+  content: '−';
+  color: #000;
+}
+
+.macos .control-button.maximize {
   background-color: #28ca42;
+}
+
+.macos .control-button.maximize::after {
+  content: '+';
+  color: #000;
+}
+
+/* Linux/Windows style controls */
+.linux .control-button,
+.windows .control-button {
+  background-color: #666;
+  color: #fff;
+}
+
+.linux .control-button {
+  border-radius: 2px;
+}
+
+.windows .control-button {
+  border-radius: 0;
+}
+
+.linux .control-button.close::after,
+.windows .control-button.close::after {
+  content: '×';
+}
+
+.linux .control-button.minimize::after,
+.windows .control-button.minimize::after {
+  content: '−';
+}
+
+.linux .control-button.maximize::after,
+.windows .control-button.maximize::after {
+  content: '□';
 }
 
 .window-style-linux .control-button {
