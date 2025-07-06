@@ -50,10 +50,12 @@
         :loading="contextLoading"
         :error="contextError"
         :is-mobile="isMobile"
+        :mobile-state="mobileContextState"
         :settings="props.settings"
         :style="{ width: showContextPanel && !isMobile ? `${contextPanelWidth}px` : 'auto' }"
         @close="handleCloseContextPanel"
         @retry="handleRetryContext"
+        @mobile-state-change="handleMobileStateChange"
       />
     </div>
 
@@ -75,6 +77,7 @@ import ConversationDisplay from '../components/ConversationDisplay.vue'
 import ContextPanel from '../components/ContextPanel.vue'
 import DraggableDivider from '../components/DraggableDivider.vue'
 import { useConversationState } from '../composables/useConversationState'
+import { useResponsive } from '../composables/useResponsive'
 import type { Settings, ConversationData, ContextItem } from '../types'
 
 const props = defineProps<{
@@ -100,6 +103,13 @@ const {
   discoverContext
 } = useConversationState()
 
+// Use responsive composable
+const { isMobile, isDesktop } = useResponsive()
+
+// Mobile context state management
+const mobileContextState = ref<'expanded' | 'minimized'>('expanded')
+const lastContextId = ref<string>('')
+
 // Draggable divider state
 const windowWidth = ref(window.innerWidth)
 const contextPanelWidth = ref(props.settings.contextPanelWidth || 400)
@@ -118,8 +128,27 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateWindowWidth)
 })
 
-// Computed
-const isMobile = computed(() => window.innerWidth < 1024)
+// Context change detection for mobile auto-show
+watch(
+  () => currentMessageContext.value,
+  (newContext) => {
+    if (isMobile.value && newContext.length > 0) {
+      const newContextId = newContext.map(item => item.id || item.name).join('-')
+      
+      if (newContextId !== lastContextId.value) {
+        // New context detected - auto-show as expanded on mobile
+        lastContextId.value = newContextId
+        mobileContextState.value = 'expanded'
+        
+        // Ensure context panel is visible
+        if (!showContextPanel.value) {
+          toggleContextPanel()
+        }
+      }
+    }
+  },
+  { immediate: true }
+)
 
 // Event handlers
 const handleReset = () => {
@@ -129,6 +158,10 @@ const handleReset = () => {
 
 const goHome = () => {
   router.push('/')
+}
+
+const handleMobileStateChange = (state: 'expanded' | 'minimized') => {
+  mobileContextState.value = state
 }
 
 const handleMessageComplete = (messageIndex: number) => {
