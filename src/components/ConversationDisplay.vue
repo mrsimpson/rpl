@@ -3,7 +3,7 @@
     title="LLM Conversation Replay"
     :window-style="settings.windowStyle"
     close-button-title="Reset conversation"
-    content-class="terminal-content-wrapper"
+    content-class="terminal-content-wrapper no-padding"
     @close="$emit('reset')"
   >
     <!-- Terminal Content -->
@@ -557,10 +557,10 @@ watch(currentMessageIndex, (newValue) => {
 <style scoped>
 /* Terminal-specific styling only - window styling handled by ApplicationWindow */
 .terminal-content-wrapper {
-  padding: 0;
   height: 100%;
   display: flex;
   flex-direction: column;
+  background-color: var(--terminal-bg); /* Ensure wrapper has terminal background */
 }
 
 .terminal {

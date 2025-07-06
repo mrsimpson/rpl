@@ -217,6 +217,11 @@ defineEmits<{
   padding: 16px;
 }
 
+/* Allow zero padding when content needs full area */
+.window-content.no-padding {
+  padding: 0;
+}
+
 /* Light theme for content */
 .light .window-content {
   background: #ffffff;
