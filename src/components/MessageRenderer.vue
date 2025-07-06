@@ -82,11 +82,9 @@ const getAnimationSpeed = () => {
 /* Message Styles */
 .message {
   margin-bottom: var(--spacing-3);
-  padding: var(--spacing-1) 0;
   width: 100%;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  padding-left: var(--spacing-2);
   font-size: var(--font-size-base); /* Standardized base font size */
 }
 
@@ -161,20 +159,6 @@ const getAnimationSpeed = () => {
 }
 
 /* Message type specific styling */
-.message-human {
-  border-left: 2px solid var(--terminal-accent);
-  padding-left: var(--spacing-2);
-  margin-left: -2px;
-}
-
-.message-agent {
-  /* Default styling */
-}
-
-.message-tool_call {
-  /* Tool calls get special styling from ToolCallRenderer */
-}
-
 .message-system {
   opacity: 0.8;
   font-style: italic;

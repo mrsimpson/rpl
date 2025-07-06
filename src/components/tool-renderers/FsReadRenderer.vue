@@ -1,6 +1,7 @@
 <template>
   <div class="fs-read-tool">
     <div class="tool-header">
+      <span class="tool-icon">🛠️</span>
       <span class="tool-title">Read file</span>
       <span class="file-path">{{ getFilePath() }}</span>
     </div>
@@ -9,15 +10,15 @@
 
 <script setup lang="ts">
 const props = defineProps<{
-  toolData: any
-}>()
+  toolData: any;
+}>();
 
 const getFilePath = (): string => {
   if (props.toolData.args?.path) {
-    return props.toolData.args.path
+    return props.toolData.args.path;
   }
-  return 'unknown path'
-}
+  return "unknown path";
+};
 </script>
 
 <style scoped>

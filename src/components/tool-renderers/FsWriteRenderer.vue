@@ -1,6 +1,7 @@
 <template>
   <div class="fs-write-tool">
     <div class="tool-header">
+        <span class="tool-icon">🛠️</span>
       <span class="tool-title">Write file</span>
       <span class="file-path">{{ getFilePath() }}</span>
     </div>

@@ -691,7 +691,6 @@ watch(currentMessageIndex, (newValue) => {
 }
 
 .message-wrapper.has-context {
-  border-left: 2px solid var(--terminal-accent, #00ff41);
   padding-left: 8px;
   margin-left: -10px;
 }

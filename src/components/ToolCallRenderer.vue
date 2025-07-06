@@ -1,24 +1,27 @@
 <template>
   <div class="tool-call" :class="`tool-call-${toolData.type}`">
     <div v-if="toolData.type === 'tool_use'" class="tool-use">
-      <component 
-        :is="getToolRenderer(toolData.name)"
-        :tool-data="toolData"
-      />
+      <component :is="getToolRenderer(toolData.name)" :tool-data="toolData" />
     </div>
-    
+
     <div v-else-if="toolData.type === 'tool_result'" class="tool-result">
       <div class="tool-header">
         <span class="tool-icon">📋</span>
         <span class="tool-name">Tool Result</span>
-        <span class="tool-status" v-if="toolData.status">{{ toolData.status }}</span>
+        <span class="tool-status" v-if="toolData.status">{{
+          toolData.status
+        }}</span>
       </div>
       <div class="result-content">
-        <pre v-if="isTextContent(toolData.content)">{{ formatTextContent(toolData.content) }}</pre>
-        <div v-else class="structured-content">{{ JSON.stringify(toolData.content, null, 2) }}</div>
+        <pre v-if="isTextContent(toolData.content)">{{
+          formatTextContent(toolData.content)
+        }}</pre>
+        <div v-else class="structured-content">
+          {{ JSON.stringify(toolData.content, null, 2) }}
+        </div>
       </div>
     </div>
-    
+
     <div v-else-if="toolData.type === 'tool_cancelled'" class="tool-cancelled">
       <div class="tool-header">
         <span class="tool-icon">❌</span>
@@ -32,7 +35,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Fallback for unknown tool types or simple string content -->
     <div v-else class="tool-unknown">
       <div class="tool-header">
@@ -47,56 +50,53 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { toolRendererRegistry } from './tool-renderers/ToolRendererRegistry'
+import { computed } from "vue";
+import { toolRendererRegistry } from "./tool-renderers/ToolRendererRegistry";
 
 const props = defineProps<{
-  content: string
-}>()
+  content: string;
+}>();
 
 const toolData = computed(() => {
   try {
-    return JSON.parse(props.content)
+    return JSON.parse(props.content);
   } catch {
-    return { type: 'unknown', content: props.content }
+    return { type: "unknown", content: props.content };
   }
-})
+});
 
 const getToolRenderer = (toolName: string) => {
-  return toolRendererRegistry.getRenderer(toolName)
-}
+  return toolRendererRegistry.getRenderer(toolName);
+};
 
 const isTextContent = (content: any): boolean => {
-  return Array.isArray(content) && 
-         content.length > 0 && 
-         content[0]?.Text
-}
+  return Array.isArray(content) && content.length > 0 && content[0]?.Text;
+};
 
 const formatTextContent = (content: any): string => {
   if (isTextContent(content)) {
-    return content[0].Text
+    return content[0].Text;
   }
-  return JSON.stringify(content, null, 2)
-}
+  return JSON.stringify(content, null, 2);
+};
 
 const formatPartialResults = (results: any): string => {
-  if (!results || !Array.isArray(results)) return ''
-  
+  if (!results || !Array.isArray(results)) return "";
+
   return results
-    .map(result => {
+    .map((result) => {
       if (result.content && isTextContent(result.content)) {
-        return result.content[0].Text
+        return result.content[0].Text;
       }
-      return JSON.stringify(result, null, 2)
+      return JSON.stringify(result, null, 2);
     })
-    .join('\n---\n')
-}
+    .join("\n---\n");
+};
 </script>
 
 <style scoped>
 .tool-call {
   font-family: var(--font-mono);
-  font-size: var(--font-size-sm);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--terminal-accent, #00ff41);
   border-radius: 6px;
@@ -121,7 +121,6 @@ const formatPartialResults = (results: any): string => {
 .tool-name {
   color: var(--terminal-accent, #00ff41);
   flex: 1;
-  font-size: var(--font-size-sm);
 }
 
 .tool-status {
@@ -145,7 +144,6 @@ const formatPartialResults = (results: any): string => {
   word-break: break-word;
   max-height: 200px;
   overflow-y: auto;
-  font-size: var(--font-size-sm);
 }
 
 .structured-content {
@@ -182,11 +180,11 @@ const formatPartialResults = (results: any): string => {
 
 /* Tool type specific styling */
 .tool-call-tool_use {
-  border-color: #4CAF50;
+  border-color: #4caf50;
 }
 
 .tool-call-tool_result {
-  border-color: #2196F3;
+  border-color: #2196f3;
 }
 
 .tool-call-tool_cancelled {
@@ -194,11 +192,11 @@ const formatPartialResults = (results: any): string => {
 }
 
 .tool-call-tool_use .tool-name {
-  color: #4CAF50;
+  color: #4caf50;
 }
 
 .tool-call-tool_result .tool-name {
-  color: #2196F3;
+  color: #2196f3;
 }
 
 .tool-call-tool_cancelled .tool-name {
