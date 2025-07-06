@@ -9,7 +9,7 @@
     
     <!-- Playback buttons -->
     <div class="playback-buttons">
-      <button @click="$emit('togglePlayback')" class="playback-btn">
+      <button @click="$emit('togglePlayback')" class="playback-btn play-btn">
         <PlayIcon v-if="!isPlaying" class="icon" />
         <PauseIcon v-else class="icon" />
         {{ isPlaying ? 'Pause' : 'Play' }}
@@ -92,5 +92,44 @@ defineEmits<{
 .playback-btn .icon {
   width: 12px;
   height: 12px;
+}
+
+/* Play button green styling */
+.play-btn {
+  border-color: #22c55e; /* Green border for all themes */
+  color: #22c55e; /* Green text for all themes */
+}
+
+.play-btn:hover {
+  background: #22c55e; /* Green background on hover */
+  color: white; /* White text on green background */
+}
+
+/* Light mode - higher contrast green */
+[data-theme="light"] .play-btn {
+  border-color: #16a34a; /* Darker green for better contrast on light background */
+  color: #16a34a;
+}
+
+[data-theme="light"] .play-btn:hover {
+  background: #16a34a;
+  color: white;
+}
+
+/* Dark mode themes - brighter green for better visibility */
+[data-theme="matrix"] .play-btn,
+[data-theme="amber"] .play-btn,
+[data-theme="blue"] .play-btn,
+[data-theme="hacker"] .play-btn {
+  border-color: #4ade80; /* Brighter green for dark backgrounds */
+  color: #4ade80;
+}
+
+[data-theme="matrix"] .play-btn:hover,
+[data-theme="amber"] .play-btn:hover,
+[data-theme="blue"] .play-btn:hover,
+[data-theme="hacker"] .play-btn:hover {
+  background: #4ade80;
+  color: #000; /* Black text on bright green for better contrast */
 }
 </style>
