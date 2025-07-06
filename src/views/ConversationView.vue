@@ -20,11 +20,14 @@
     <!-- Conversation display -->
     <div v-else-if="conversationData" class="conversation-container">
       <!-- Main conversation display -->
-      <div 
+      <div
         class="terminal-panel"
-        :style="{ width: showContextPanel && !isMobile ? `${terminalWidth}px` : '100%' }"
+        :style="{
+          width: showContextPanel && !isMobile ? `${terminalWidth}px` : '100%',
+        }"
       >
         <ConversationDisplay
+          ref="conversationDisplayRef"
           :conversation-data="conversationData as ConversationData"
           :context-items="contextItems as any[]"
           :context-loading="contextLoading"
@@ -32,9 +35,10 @@
           @reset="handleReset"
           @message-complete="handleMessageComplete"
           @message-has-context="handleMessageHasContext"
+          @paused-for-context="handlePausedForContext"
         />
       </div>
-      
+
       <!-- Draggable Divider (desktop only) -->
       <DraggableDivider
         v-if="showContextPanel && !isMobile"
@@ -42,7 +46,7 @@
         :max-width="windowWidth - 400"
         @resize="handleDividerResize"
       />
-      
+
       <!-- Context Panel -->
       <ContextPanel
         :visible="showContextPanel"
@@ -52,7 +56,10 @@
         :is-mobile="isMobile"
         :mobile-state="mobileContextState"
         :settings="props.settings"
-        :style="{ width: showContextPanel && !isMobile ? `${contextPanelWidth}px` : 'auto' }"
+        :style="{
+          width:
+            showContextPanel && !isMobile ? `${contextPanelWidth}px` : 'auto',
+        }"
         @close="handleCloseContextPanel"
         @retry="handleRetryContext"
         @mobile-state-change="handleMobileStateChange"
@@ -67,25 +74,42 @@
         <button @click="goHome" class="home-btn">Go to Home</button>
       </div>
     </div>
+
+    <!-- Context Pause Notification -->
+    <ToastNotification
+      :visible="showContextNotification"
+      variant="context"
+      icon="📎"
+      title="Paused for new context"
+      :message="`${pauseContextItems.length} item${pauseContextItems.length !== 1 ? 's' : ''} available`"
+      :clickable="true"
+      :show-progress="true"
+      :duration="8000"
+      :actions="contextNotificationActions"
+      @clicked="handleResumeFromContext"
+      @dismissed="handleDismissNotification"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch, computed, ref, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import ConversationDisplay from '../components/ConversationDisplay.vue'
-import ContextPanel from '../components/ContextPanel.vue'
-import DraggableDivider from '../components/DraggableDivider.vue'
-import { useConversationState } from '../composables/useConversationState'
-import { useResponsive } from '../composables/useResponsive'
-import type { Settings, ConversationData, ContextItem } from '../types'
+import { onMounted, watch, computed, ref, onUnmounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { PlayIcon } from "lucide-vue-next";
+import ConversationDisplay from "../components/ConversationDisplay.vue";
+import ContextPanel from "../components/ContextPanel.vue";
+import DraggableDivider from "../components/DraggableDivider.vue";
+import ToastNotification from "../components/ToastNotification.vue";
+import { useConversationState } from "../composables/useConversationState";
+import { useResponsive } from "../composables/useResponsive";
+import type { Settings, ConversationData, ContextItem } from "../types";
 
 const props = defineProps<{
-  settings: Settings
-}>()
+  settings: Settings;
+}>();
 
-const route = useRoute()
-const router = useRouter()
+const route = useRoute();
+const router = useRouter();
 
 const {
   conversationData,
@@ -100,129 +124,191 @@ const {
   clearData,
   updateCurrentMessageContext,
   toggleContextPanel,
-  discoverContext
-} = useConversationState()
+  discoverContext,
+} = useConversationState();
 
 // Use responsive composable
-const { isMobile, isDesktop } = useResponsive()
+const { isMobile } = useResponsive();
 
 // Mobile context state management
-const mobileContextState = ref<'expanded' | 'minimized'>('expanded')
-const lastContextId = ref<string>('')
+const mobileContextState = ref<"expanded" | "minimized">("expanded");
+const lastContextId = ref<string>("");
+
+// Context pause notification state
+const showContextNotification = ref(false);
+const pauseContextItems = ref<ContextItem[]>([]);
+const conversationDisplayRef = ref<InstanceType<
+  typeof ConversationDisplay
+> | null>(null);
+
+// Context notification actions
+const contextNotificationActions = computed(() => [
+  {
+    label: "Resume",
+    handler: handleResumeFromContext,
+    variant: "primary" as const,
+    icon: PlayIcon
+  }
+]);
 
 // Draggable divider state
-const windowWidth = ref(window.innerWidth)
-const contextPanelWidth = ref(props.settings.contextPanelWidth || 400)
-const terminalWidth = computed(() => windowWidth.value - contextPanelWidth.value - 8) // 8px for divider
+const windowWidth = ref(window.innerWidth);
+const contextPanelWidth = ref(props.settings.contextPanelWidth || 400);
+const terminalWidth = computed(
+  () => windowWidth.value - contextPanelWidth.value - 8
+); // 8px for divider
 
 // Update window width on resize
 const updateWindowWidth = () => {
-  windowWidth.value = window.innerWidth
-}
+  windowWidth.value = window.innerWidth;
+};
 
 onMounted(() => {
-  window.addEventListener('resize', updateWindowWidth)
-})
+  window.addEventListener("resize", updateWindowWidth);
+});
 
 onUnmounted(() => {
-  window.removeEventListener('resize', updateWindowWidth)
-})
+  window.removeEventListener("resize", updateWindowWidth);
+});
 
 // Context change detection for mobile auto-show
 watch(
   () => currentMessageContext.value,
   (newContext) => {
     if (isMobile.value && newContext.length > 0) {
-      const newContextId = newContext.map(item => item.id || item.name).join('-')
-      
+      const newContextId = newContext
+        .map((item) => item.id || item.filename)
+        .join("-");
+
       if (newContextId !== lastContextId.value) {
         // New context detected - auto-show as expanded on mobile
-        lastContextId.value = newContextId
-        mobileContextState.value = 'expanded'
-        
+        lastContextId.value = newContextId;
+        mobileContextState.value = "expanded";
+
         // Ensure context panel is visible
         if (!showContextPanel.value) {
-          toggleContextPanel()
+          toggleContextPanel();
         }
       }
     }
   },
   { immediate: true }
-)
+);
 
 // Event handlers
 const handleReset = () => {
-  clearData()
-  router.push('/')
-}
+  clearData();
+  router.push("/");
+};
 
 const goHome = () => {
-  router.push('/')
-}
+  router.push("/");
+};
 
-const handleMobileStateChange = (state: 'expanded' | 'minimized') => {
-  mobileContextState.value = state
-}
+const handleMobileStateChange = (state: "expanded" | "minimized") => {
+  mobileContextState.value = state;
+};
 
 const handleMessageComplete = (messageIndex: number) => {
   // Update context for the completed message
-  updateCurrentMessageContext(messageIndex)
-}
+  updateCurrentMessageContext(messageIndex);
+};
 
-const handleMessageHasContext = ({ messageIndex, contextItems }: { messageIndex: number, contextItems: ContextItem[] }) => {
+const handleMessageHasContext = ({
+  messageIndex,
+  contextItems,
+}: {
+  messageIndex: number;
+  contextItems: ContextItem[];
+}) => {
   // This event is emitted when a message with context becomes visible
-  console.log(`Message ${messageIndex} has ${contextItems.length} context items`)
-  updateCurrentMessageContext(messageIndex)
-}
+  console.log(
+    `Message ${messageIndex} has ${contextItems.length} context items`
+  );
+  updateCurrentMessageContext(messageIndex);
+};
 
 const handleCloseContextPanel = () => {
-  toggleContextPanel()
-}
+  toggleContextPanel();
+};
 
 const handleDividerResize = (newTerminalWidth: number) => {
   // Update the context panel width based on the new terminal width
-  const newContextPanelWidth = windowWidth.value - newTerminalWidth - 8 // 8px for divider
-  contextPanelWidth.value = Math.max(300, Math.min(800, newContextPanelWidth))
-  
+  const newContextPanelWidth = windowWidth.value - newTerminalWidth - 8; // 8px for divider
+  contextPanelWidth.value = Math.max(300, Math.min(800, newContextPanelWidth));
+
   // Update settings to persist the change
-  props.settings.contextPanelWidth = contextPanelWidth.value
-  
+  props.settings.contextPanelWidth = contextPanelWidth.value;
+
   // Save to localStorage
-  localStorage.setItem('settings', JSON.stringify(props.settings))
-}
+  localStorage.setItem("settings", JSON.stringify(props.settings));
+};
 
 const handleRetryContext = async () => {
   // Retry context discovery
-  const urlParam = route.query.url as string
+  const urlParam = route.query.url as string;
   if (urlParam) {
-    await discoverContext(urlParam)
+    await discoverContext(urlParam);
   }
-}
+};
+
+// Context pause notification handlers
+const handlePausedForContext = ({
+  contextItems,
+}: {
+  contextItems: ContextItem[];
+}) => {
+  pauseContextItems.value = contextItems;
+  showContextNotification.value = true;
+
+  // Auto-expand context panel on mobile when paused for context
+  if (isMobile.value) {
+    mobileContextState.value = "expanded";
+    if (!showContextPanel.value) {
+      toggleContextPanel();
+    }
+  }
+};
+
+const handleResumeFromContext = () => {
+  showContextNotification.value = false;
+  pauseContextItems.value = [];
+
+  // Resume playback through the conversation display component
+  if (conversationDisplayRef.value) {
+    conversationDisplayRef.value.resumeFromContext();
+  }
+};
+
+const handleDismissNotification = () => {
+  showContextNotification.value = false;
+  pauseContextItems.value = [];
+};
 
 // Handle URL parameter loading
 onMounted(async () => {
-  const urlParam = route.query.url as string
-  
+  const urlParam = route.query.url as string;
+
   if (urlParam && !conversationData.value) {
     // Load from URL if we have a URL parameter and no existing data
-    await loadFromUrl(urlParam)
+    await loadFromUrl(urlParam);
   } else if (!urlParam && !conversationData.value) {
     // No URL parameter and no existing data - redirect to home
     setTimeout(() => {
-      router.push('/')
-    }, 100)
+      router.push("/");
+    }, 100);
   }
   // If we have existing data (from local file), just display it
-})
+});
 
 // Handle error state redirect
 watch(error, (newError) => {
   if (newError) {
     setTimeout(() => {
-      router.push('/')
-    }, 3000)
+      router.push("/");
+    }, 3000);
   }
-})
+});
 </script>
 
 <style scoped>
@@ -263,8 +349,12 @@ watch(error, (newError) => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .redirect-message {
@@ -308,7 +398,7 @@ watch(error, (newError) => {
     display: flex;
     flex-direction: row;
   }
-  
+
   .terminal-panel {
     flex: none; /* Don't flex when we have explicit width */
   }
@@ -319,7 +409,7 @@ watch(error, (newError) => {
   .conversation-container {
     flex-direction: column;
   }
-  
+
   .terminal-panel {
     width: 100% !important;
     flex: 1;

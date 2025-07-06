@@ -12,6 +12,8 @@ A Vue.js application for replaying LLM conversations with an interactive termina
 - **Auto-play mode** with customizable timing
 - **Ghost preview** of upcoming user messages
 - **Progress indicators** showing conversation completion
+- **Smart auto-pause**: Automatically pauses when new context becomes available during fast playback
+- **Context notifications**: Toast notifications with resume controls when context appears
 
 ### 🖥️ Terminal Interface
 - **Authentic terminal styling** with monospace fonts and cursor animations
@@ -29,8 +31,17 @@ A Vue.js application for replaying LLM conversations with an interactive termina
 ### ⚙️ Customization
 - **Animation speed controls** (separate for human/agent messages)
 - **Visual preferences** (themes, window styles, progress indicators)
+- **Auto-pause settings** (enable/disable context-aware pausing)
 - **Settings persistence** via localStorage
 - **Responsive design** for mobile, tablet, and desktop
+
+### 🔔 Smart Context Awareness
+- **Intelligent auto-pause**: Automatically pauses playback when new context documents appear
+- **Context notifications**: Non-intrusive toast notifications with resume controls
+- **Smart filtering**: Only pauses for NEW context documents, not repeated ones
+- **Immediate detection**: Context appears as soon as messages become visible
+- **Universal support**: Works with all message types including tool calls
+- **Mobile optimized**: Context notifications adapt to mobile and desktop layouts
 
 ## 🔗 URL-Based Loading
 

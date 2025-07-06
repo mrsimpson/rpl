@@ -5,7 +5,10 @@
     </div>
     <PlaybackControls
       :is-playing="isPlaying"
+      :pause-reason="pauseReason"
+      :context-count="contextCount"
       @toggle-playback="handleTogglePlayback"
+      @resume-from-context="handleResumeFromContext"
       @restart="handleRestart"
       @reset="handleReset"
     />
@@ -23,10 +26,16 @@ import PlaybackControls from '../components/PlaybackControls.vue'
 const isPlaying = ref(false)
 const currentMessage = ref(0)
 const totalMessages = ref(0)
+const pauseReason = ref<'user' | 'context' | null>(null)
+const contextCount = ref(0)
 
 const handleTogglePlayback = () => {
   // Emit event to parent or use global state
   window.dispatchEvent(new CustomEvent('playback-toggle'))
+}
+
+const handleResumeFromContext = () => {
+  window.dispatchEvent(new CustomEvent('playback-resume-from-context'))
 }
 
 const handleRestart = () => {
@@ -46,6 +55,8 @@ const handleMessageCounterUpdate = (event: CustomEvent) => {
 // Listen for playback state changes
 const handlePlaybackStateChange = (event: CustomEvent) => {
   isPlaying.value = event.detail.isPlaying
+  pauseReason.value = event.detail.pauseReason || null
+  contextCount.value = event.detail.contextCount || 0
 }
 
 onMounted(() => {

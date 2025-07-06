@@ -6,13 +6,27 @@
       <span><kbd>Tab</kbd> Complete current</span>
       <span><kbd>Esc</kbd> Reset</span>
     </div>
-    
+
     <!-- Playback buttons -->
     <div class="playback-buttons">
-      <button @click="$emit('togglePlayback')" class="playback-btn play-btn">
+      <button
+        @click="handlePlayPause"
+        class="playback-btn play-btn"
+        :class="{
+          'context-pause': pauseReason === 'context',
+          'user-pause': pauseReason === 'user',
+        }"
+        :title="playButtonTooltip"
+      >
         <PlayIcon v-if="!isPlaying" class="icon" />
         <PauseIcon v-else class="icon" />
-        {{ isPlaying ? 'Pause' : 'Play' }}
+        <span class="button-text">
+          {{ playButtonText }}
+          <span
+            v-if="!isPlaying && pauseReason === 'context'"
+            class="context-info"
+          />
+        </span>
       </button>
       <button @click="$emit('restart')" class="playback-btn">
         <RotateCcwIcon class="icon" />
@@ -27,17 +41,52 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import { PlayIcon, PauseIcon, RotateCcwIcon, XIcon } from "lucide-vue-next";
 
-defineProps<{
+const props = defineProps<{
   isPlaying: boolean;
+  pauseReason?: "user" | "context" | null;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   togglePlayback: [];
+  resumeFromContext: [];
   restart: [];
   reset: [];
 }>();
+
+const playButtonText = computed(() => {
+  if (props.isPlaying) return "Pause";
+
+  if (props.pauseReason === "context") {
+    return "Resume";
+  }
+
+  return "Play";
+});
+
+const playButtonTooltip = computed(() => {
+  if (props.isPlaying) return "Pause playback";
+
+  if (props.pauseReason === "context") {
+    return `Paused for context item. Click to resume playback.`;
+  }
+
+  if (props.pauseReason === "user") {
+    return "Paused by user. Click to resume playback.";
+  }
+
+  return "Start playback";
+});
+
+const handlePlayPause = () => {
+  if (props.pauseReason === "context" && !props.isPlaying) {
+    emit("resumeFromContext");
+  } else {
+    emit("togglePlayback");
+  }
+};
 </script>
 
 <style scoped>
@@ -72,7 +121,7 @@ defineEmits<{
 
 .playback-btn {
   background: transparent;
-  border: 1px solid #e0e0e0;;
+  border: 1px solid #e0e0e0;
   color: var(--terminal-text);
   padding: 0.3rem 0.6rem;
   border-radius: 4px;
@@ -82,6 +131,7 @@ defineEmits<{
   gap: 0.3rem;
   font-size: 0.7rem;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .playback-btn:hover {
@@ -92,44 +142,76 @@ defineEmits<{
 .playback-btn .icon {
   width: 12px;
   height: 12px;
+  flex-shrink: 0;
+}
+
+.button-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.context-info {
+  font-size: 0.6rem;
+  opacity: 0.8;
+  font-weight: normal;
 }
 
 /* Play button green styling */
-.play-btn {
+.play-btn:hover {
   border-color: #22c55e; /* Green border for all themes */
   color: #22c55e; /* Green text for all themes */
 }
 
-.play-btn:hover {
+.play-btn {
   background: #22c55e; /* Green background on hover */
   color: white; /* White text on green background */
 }
 
-/* Light mode - higher contrast green */
-[data-theme="light"] .play-btn {
+/* Context pause special styling */
+.play-btn.context-pause:hover {
+  border-color: #f59e0b; /* Amber border when paused for context */
+  color: #f59e0b;
+  animation: contextPulse 2s ease-in-out infinite;
+}
+
+.play-btn.context-pause {
+  background: #f59e0b;
+  color: white;
+}
+
+/* Light mode - higher contrast colors */
+[data-theme="light"] .play-btn:hover {
   border-color: #16a34a; /* Darker green for better contrast on light background */
   color: #16a34a;
 }
 
-[data-theme="light"] .play-btn:hover {
+[data-theme="light"] .play-btn {
   background: #16a34a;
   color: white;
 }
 
-/* Dark mode themes - brighter green for better visibility */
-[data-theme="matrix"] .play-btn,
-[data-theme="amber"] .play-btn,
-[data-theme="blue"] .play-btn,
-[data-theme="hacker"] .play-btn {
-  border-color: #4ade80; /* Brighter green for dark backgrounds */
-  color: #4ade80;
+[data-theme="light"] .play-btn.context-pause:hover {
+  border-color: #d97706;
+  color: #d97706;
 }
 
-[data-theme="matrix"] .play-btn:hover,
-[data-theme="amber"] .play-btn:hover,
-[data-theme="blue"] .play-btn:hover,
-[data-theme="hacker"] .play-btn:hover {
-  background: #4ade80;
-  color: #000; /* Black text on bright green for better contrast */
+[data-theme="light"] .play-btn.context-pause {
+  background: #d97706;
+  color: white;
+}
+
+/* Animations */
+@keyframes contextPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
 }
 </style>

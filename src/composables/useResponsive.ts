@@ -1,36 +1,30 @@
-import { ref, computed, onMounted, onUnmounted, readonly } from 'vue'
-
-// Consistent breakpoints across the application
-export const BREAKPOINTS = {
-  mobile: 768,
-  tablet: 1024,
-} as const
+import { ref, onMounted, onUnmounted } from 'vue'
 
 export function useResponsive() {
-  const windowWidth = ref(window.innerWidth)
-
-  const updateWidth = () => {
-    windowWidth.value = window.innerWidth
+  const isMobile = ref(false)
+  const isTablet = ref(false)
+  const isDesktop = ref(false)
+  
+  const updateResponsiveState = () => {
+    const width = window.innerWidth
+    
+    isMobile.value = width < 768
+    isTablet.value = width >= 768 && width < 1024
+    isDesktop.value = width >= 1024
   }
-
+  
   onMounted(() => {
-    window.addEventListener('resize', updateWidth)
+    updateResponsiveState()
+    window.addEventListener('resize', updateResponsiveState)
   })
-
+  
   onUnmounted(() => {
-    window.removeEventListener('resize', updateWidth)
+    window.removeEventListener('resize', updateResponsiveState)
   })
-
-  const isMobile = computed(() => windowWidth.value <= BREAKPOINTS.mobile)
-  const isTablet = computed(() => 
-    windowWidth.value > BREAKPOINTS.mobile && windowWidth.value <= BREAKPOINTS.tablet
-  )
-  const isDesktop = computed(() => windowWidth.value > BREAKPOINTS.tablet)
-
+  
   return {
-    windowWidth: readonly(windowWidth),
     isMobile,
     isTablet,
-    isDesktop,
+    isDesktop
   }
 }

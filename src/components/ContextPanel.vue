@@ -80,7 +80,7 @@
         
         <!-- Minimized preview -->
         <div v-else-if="isMobile && mobileState === 'minimized'" class="minimized-preview">
-          <span class="preview-text">{{ activeContextItem?.name || 'Context available' }}</span>
+          <span class="preview-text">{{ activeContextItem?.filename || 'Context available' }}</span>
           <span class="tap-hint">Tap to expand</span>
         </div>
       </div>

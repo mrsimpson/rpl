@@ -66,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick, watch, readonly } from "vue";
 import ApplicationWindow from "./ApplicationWindow.vue";
 import MessageRenderer from "./MessageRenderer.vue";
 import { useTheme } from '../composables/useTheme'
@@ -107,6 +107,7 @@ const emit = defineEmits<{
   reset: [];
   messageComplete: [messageIndex: number];
   messageHasContext: [data: { messageIndex: number; contextItems: any[] }];
+  pausedForContext: [data: { contextItems: any[] }];
 }>();
 
 // Use theme composables for terminal theming only
@@ -197,11 +198,63 @@ const hasContextForMessage = (messageIndex: number): boolean => {
   return getContextForMessage(messageIndex).length > 0
 }
 
+// Pause reason tracking
+type PauseReason = 'user' | 'context' | null;
+const pauseReason = ref<PauseReason>(null);
+const contextPauseDebounce = ref<number | null>(null);
+const pauseContextItems = ref<ContextItem[]>([]);
+
+// Track seen context documents to only pause for NEW context
+const seenContextIds = ref<Set<string>>(new Set());
+
 const checkAndEmitContext = (messageIndex: number) => {
   const contextItems = getContextForMessage(messageIndex)
   if (contextItems.length > 0) {
     emit('messageHasContext', { messageIndex, contextItems })
+    
+    // Auto-pause logic - only for NEW context documents
+    if (props.settings.pauseOnContext && isPlaying.value) {
+      const newContextItems = contextItems.filter(item => {
+        const contextId = getContextItemId(item);
+        return !seenContextIds.value.has(contextId);
+      });
+      
+      if (newContextItems.length > 0) {
+        // Mark these context items as seen
+        newContextItems.forEach(item => {
+          seenContextIds.value.add(getContextItemId(item));
+        });
+        
+        pauseForContext(newContextItems);
+      }
+    }
   }
+}
+
+// Generate a unique ID for a context item to track if we've seen it before
+const getContextItemId = (item: ContextItem): string => {
+  // Use a combination of properties to create a unique identifier
+  return `${item.type}-${item.filename}-${item.url}`;
+}
+
+const pauseForContext = (contextItems: ContextItem[]) => {
+  // Prevent multiple context pauses
+  if (pauseReason.value === 'context') return
+  
+  // Clear any pending pause
+  if (contextPauseDebounce.value) {
+    clearTimeout(contextPauseDebounce.value)
+  }
+  
+  // Debounced pause to handle rapid context changes
+  contextPauseDebounce.value = setTimeout(() => {
+    if (isPlaying.value && props.settings.pauseOnContext) {
+      isPlaying.value = false
+      pauseReason.value = 'context'
+      pauseContextItems.value = contextItems
+      emit('pausedForContext', { contextItems })
+    }
+  }, 100)
 }
 
 // State machine for conversation flow
@@ -245,12 +298,30 @@ const togglePlayback = () => {
   console.log('Toggle playback - isPlaying:', isPlaying.value);
   
   if (isPlaying.value) {
-    // Play pressed - scroll to bottom and start/continue playback
+    // Play pressed - clear pause reason and start/continue playback
+    pauseReason.value = null;
     scrollToBottom();
     startPlaybackUntilNextUser();
+  } else {
+    // Manual pause - set pause reason to user
+    pauseReason.value = 'user';
   }
-  // If pausing, the paused prop change will pause the animation
 };
+
+const resumeFromContext = () => {
+  if (pauseReason.value === 'context') {
+    pauseReason.value = null;
+    pauseContextItems.value = [];
+    isPlaying.value = true;
+    startPlaybackUntilNextUser();
+  }
+};
+
+// Expose functions and state for parent components
+defineExpose({
+  resumeFromContext,
+  pauseReason: readonly(pauseReason)
+});
 
 const startPlaybackUntilNextUser = () => {
   if (conversationState.value === 'waiting_for_user') {
@@ -262,6 +333,9 @@ const startPlaybackUntilNextUser = () => {
         currentMessageIndex.value++;
         conversationState.value = 'user_typing';
         scrollToBottom();
+        
+        // Check for context immediately when user message becomes visible
+        checkAndEmitContext(currentMessageIndex.value);
       } else {
         // Next message is agent/tool - start agent sequence
         processAgentMessages();
@@ -287,6 +361,9 @@ const submitUserMessage = () => {
     currentMessageIndex.value++;
     conversationState.value = 'agent_typing';
     
+    // Check for context immediately when user message becomes visible
+    checkAndEmitContext(currentMessageIndex.value);
+    
     // Set playing to true and start play-until-next-user behavior
     isPlaying.value = true;
     
@@ -305,6 +382,9 @@ const processAgentMessages = () => {
     currentMessageIndex.value++;
     conversationState.value = 'agent_typing';
     scrollToBottom();
+    
+    // Check for context immediately when message becomes visible
+    checkAndEmitContext(currentMessageIndex.value);
     
     // If it's a tool_call, continue immediately since it doesn't animate
     if (nextMsg.type === 'tool_call') {
@@ -329,6 +409,11 @@ const restart = () => {
   
   // Clear current message context and hide context panel
   emit('messageHasContext', { messageIndex: -1, contextItems: [] });
+  
+  // Reset seen context tracking
+  seenContextIds.value.clear();
+  pauseReason.value = null;
+  pauseContextItems.value = [];
   
   initializeConversation();
 };
@@ -358,9 +443,6 @@ const onMessageComplete = () => {
   
   // Emit message completion event for context system
   emit('messageComplete', currentMessageIndex.value);
-  
-  // Check and emit context for the completed message
-  checkAndEmitContext(currentMessageIndex.value);
   
   if (conversationState.value === 'agent_typing') {
     if (isPlaying.value) {
@@ -458,6 +540,11 @@ const formatDate = (timestamp: string): string => {
 
 // Watch for conversation data changes and initialize
 watch(() => props.conversationData, () => {
+  // Reset seen context tracking when conversation changes
+  seenContextIds.value.clear();
+  pauseReason.value = null;
+  pauseContextItems.value = [];
+  
   initializeConversation();
 }, { immediate: true });
 
@@ -516,6 +603,7 @@ onMounted(() => {
   window.addEventListener('playback-toggle', togglePlayback)
   window.addEventListener('playback-restart', restart)
   window.addEventListener('playback-reset', () => emit('reset'))
+  window.addEventListener('playback-resume-from-context', resumeFromContext)
 });
 
 onUnmounted(() => {
@@ -529,17 +617,27 @@ onUnmounted(() => {
   if (scrollTimeout) {
     clearTimeout(scrollTimeout);
   }
+  
+  // Clean up context pause debounce timeout
+  if (contextPauseDebounce.value) {
+    clearTimeout(contextPauseDebounce.value);
+  }
 
   // Clean up footer event listeners
   window.removeEventListener('playback-toggle', togglePlayback)
   window.removeEventListener('playback-restart', restart)
   window.removeEventListener('playback-reset', () => emit('reset'))
+  window.removeEventListener('playback-resume-from-context', resumeFromContext)
 });
 
 // Emit playback state changes for footer
-watch(isPlaying, (newValue) => {
+watch([isPlaying, pauseReason], ([newIsPlaying, newPauseReason]) => {
   window.dispatchEvent(new CustomEvent('playback-state-change', {
-    detail: { isPlaying: newValue }
+    detail: { 
+      isPlaying: newIsPlaying,
+      pauseReason: newPauseReason,
+      contextCount: newPauseReason === 'context' ? pauseContextItems.value?.length || 0 : 0
+    }
   }))
 })
 
@@ -570,7 +668,7 @@ watch(currentMessageIndex, (newValue) => {
   background-color: var(--terminal-bg);
   color: var(--terminal-text);
   font-family: var(--font-mono);
-  min-height: 0;
+  min-height: 100%;
   width: 100%;
   max-width: 100%;
 }

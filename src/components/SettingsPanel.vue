@@ -94,6 +94,23 @@
     </div>
 
     <div class="setting-group">
+      <label>Context Behavior</label>
+      <div class="checkbox-options">
+        <label class="checkbox-option">
+          <input
+            type="checkbox"
+            :checked="settings.pauseOnContext || false"
+            @change="updateSetting('pauseOnContext', ($event.target as HTMLInputElement).checked)"
+          />
+          <span>Pause on context changes</span>
+        </label>
+        <div class="setting-description">
+          Automatically pause playback when new context becomes available during fast playback
+        </div>
+      </div>
+    </div>
+
+    <div class="setting-group">
       <button @click="resetSettings" class="reset-btn">
         Reset to Defaults
       </button>
@@ -138,6 +155,7 @@ const resetSettings = () => {
     showProgress: true,
     showGhostPreview: true,
     enableSounds: false,
+    pauseOnContext: false,
     contextPanelWidth: 400,
   })
 }
@@ -284,6 +302,15 @@ const resetSettings = () => {
 
 .checkbox-option input[type="checkbox"] {
   margin: 0;
+}
+
+.setting-description {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-left: 1.5rem;
+  margin-top: 0.25rem;
+  line-height: 1.3;
+  color: var(--terminal-text);
 }
 
 .reset-btn {
