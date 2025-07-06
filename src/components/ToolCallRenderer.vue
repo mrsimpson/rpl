@@ -97,14 +97,21 @@ const formatPartialResults = (results: any): string => {
 .tool-call {
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--terminal-accent, #00ff41);
+  border-radius: 6px;
+  padding: var(--spacing-2);
+  margin: var(--spacing-1) 0;
 }
 
 .tool-header {
   display: flex;
   align-items: center;
   gap: var(--spacing-1);
-  padding: var(--spacing-1) 0;
+  padding: 0 0 var(--spacing-1) 0;
   font-weight: bold;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: var(--spacing-1);
 }
 
 .tool-icon {
@@ -112,8 +119,9 @@ const formatPartialResults = (results: any): string => {
 }
 
 .tool-name {
-  color: var(--terminal-text);
+  color: var(--terminal-accent, #00ff41);
   flex: 1;
+  font-size: var(--font-size-sm);
 }
 
 .tool-status {
@@ -137,24 +145,28 @@ const formatPartialResults = (results: any): string => {
   word-break: break-word;
   max-height: 200px;
   overflow-y: auto;
+  font-size: var(--font-size-sm);
 }
 
 .structured-content {
   color: var(--terminal-text);
   white-space: pre-wrap;
   font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
 }
 
 .cancellation-reason {
   color: var(--terminal-text);
   font-style: italic;
   margin-bottom: var(--spacing-2);
+  font-size: var(--font-size-sm);
 }
 
 .partial-results-header {
-  color: var(--terminal-text);
+  color: var(--terminal-accent, #00ff41);
   font-weight: bold;
   margin-bottom: var(--spacing-1);
+  font-size: var(--font-size-sm);
 }
 
 .partial-results pre {
@@ -165,5 +177,31 @@ const formatPartialResults = (results: any): string => {
   max-height: 150px;
   overflow-y: auto;
   margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+/* Tool type specific styling */
+.tool-call-tool_use {
+  border-color: #4CAF50;
+}
+
+.tool-call-tool_result {
+  border-color: #2196F3;
+}
+
+.tool-call-tool_cancelled {
+  border-color: #f44336;
+}
+
+.tool-call-tool_use .tool-name {
+  color: #4CAF50;
+}
+
+.tool-call-tool_result .tool-name {
+  color: #2196F3;
+}
+
+.tool-call-tool_cancelled .tool-name {
+  color: #f44336;
 }
 </style>

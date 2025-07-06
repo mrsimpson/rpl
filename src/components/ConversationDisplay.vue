@@ -1,18 +1,11 @@
 <template>
-  <div class="terminal-window" :class="[themeClasses, windowStyleClasses]">
-    <!-- Terminal Window Header -->
-    <div class="window-header">
-      <div class="window-controls">
-        <div class="control-button close" @click="$emit('reset')"></div>
-        <div class="control-button minimize"></div>
-        <div class="control-button maximize"></div>
-      </div>
-      <div class="window-title">LLM Conversation Replay</div>
-      <div class="terminal-controls">
-        <!-- Remove individual controls - they're now in the footer -->
-      </div>
-    </div>
-
+  <ApplicationWindow
+    title="LLM Conversation Replay"
+    :window-style="settings.windowStyle"
+    close-button-title="Reset conversation"
+    content-class="terminal-content-wrapper"
+    @close="$emit('reset')"
+  >
     <!-- Terminal Content -->
     <div 
       class="terminal" 
@@ -69,14 +62,14 @@
         </div>
       </div>
     </div>
-  </div>
+  </ApplicationWindow>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
+import ApplicationWindow from "./ApplicationWindow.vue";
 import MessageRenderer from "./MessageRenderer.vue";
 import { useTheme } from '../composables/useTheme'
-import { useOSStyle } from '../composables/useOSStyle'
 import type { ConversationData, Settings, ContextItem, TerminalThemeDefinition } from "../types";
 
 // Terminal theme definitions - local to this component
@@ -116,19 +109,12 @@ const emit = defineEmits<{
   messageHasContext: [data: { messageIndex: number; contextItems: any[] }];
 }>();
 
-// Use theme composables
-const { themeClasses } = useTheme()
-
-// Make window style reactive to settings changes
-const windowStyleClasses = computed(() => {
-  const { windowStyleClasses: classes } = useOSStyle(props.settings.windowStyle)
-  return classes.value
-})
+// Use theme composables for terminal theming only
+const { isDark } = useTheme()
 
 // Terminal theme styling - now responsive to app light/dark mode
 const terminalThemeStyles = computed(() => {
   const baseTheme = terminalThemes[props.settings.terminalTheme] || terminalThemes.matrix
-  const { isDark } = useTheme()
   
   // Adapt terminal theme colors based on app light/dark mode
   let colors = { ...baseTheme.colors }
@@ -569,178 +555,12 @@ watch(currentMessageIndex, (newValue) => {
 </script>
 
 <style scoped>
-.terminal-window {
+/* Terminal-specific styling only - window styling handled by ApplicationWindow */
+.terminal-content-wrapper {
+  padding: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: var(--window-bg);
-  border-radius: var(--window-border-radius);
-  overflow: hidden;
-  box-shadow: var(--window-shadow);
-  height: 100%;
-  max-height: 100%;
-}
-
-/* Window Styles */
-.window-style-macos {
-  --window-bg: #2d2d2d;
-  --window-border-radius: 12px;
-  --window-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-  --control-size: 12px;
-  --control-spacing: 8px;
-}
-
-.window-style-linux {
-  --window-bg: #1e1e1e;
-  --window-border-radius: 4px;
-  --window-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  --control-size: 14px;
-  --control-spacing: 4px;
-}
-
-.window-style-windows {
-  --window-bg: #0c0c0c;
-  --window-border-radius: 8px;
-  --window-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
-  --control-size: 16px;
-  --control-spacing: 2px;
-}
-
-.window-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-2);
-  background-color: rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  min-height: 40px;
-}
-
-.window-controls {
-  display: flex;
-  gap: 8px;
-  margin-right: 16px;
-  align-items: center;
-}
-
-.control-button {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: bold;
-}
-
-/* macOS style controls */
-.macos .control-button.close {
-  background-color: #ff5f57;
-}
-
-.macos .control-button.close:hover {
-  background-color: #ff3b30;
-}
-
-.macos .control-button.close::after {
-  content: '×';
-  color: #000;
-}
-
-.macos .control-button.minimize {
-  background-color: #ffbd2e;
-}
-
-.macos .control-button.minimize::after {
-  content: '−';
-  color: #000;
-}
-
-.macos .control-button.maximize {
-  background-color: #28ca42;
-}
-
-.macos .control-button.maximize::after {
-  content: '+';
-  color: #000;
-}
-
-/* Linux/Windows style controls */
-.linux .control-button,
-.windows .control-button {
-  background-color: #666;
-  color: #fff;
-}
-
-.linux .control-button {
-  border-radius: 2px;
-}
-
-.windows .control-button {
-  border-radius: 0;
-}
-
-.linux .control-button.close::after,
-.windows .control-button.close::after {
-  content: '×';
-}
-
-.linux .control-button.minimize::after,
-.windows .control-button.minimize::after {
-  content: '−';
-}
-
-.linux .control-button.maximize::after,
-.windows .control-button.maximize::after {
-  content: '□';
-}
-
-.window-style-linux .control-button {
-  background-color: #666;
-  border-radius: 2px;
-}
-
-.window-style-windows .control-button {
-  background-color: #666;
-  border-radius: 0;
-}
-
-.window-title {
-  font-size: var(--font-size-sm);
-  color: var(--terminal-text);
-  font-weight: 500;
-  flex: 1;
-  text-align: center;
-}
-
-.terminal-controls {
-  display: flex;
-  gap: var(--spacing-1);
-}
-
-.control-btn {
-  background: none;
-  border: none;
-  color: var(--terminal-text);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: var(--transition);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.control-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.icon {
-  width: 16px;
-  height: 16px;
 }
 
 .terminal {
@@ -809,13 +629,19 @@ watch(currentMessageIndex, (newValue) => {
   margin-top: var(--spacing-1);
 }
 
+.ghost-preview,
+.completed-message {
+  margin-top: var(--spacing-2);
+  display: flex;
+  align-items: baseline;
+  white-space: pre-wrap;
+  min-height: 1.4em; /* Ensure consistent height */
+}
+
 .ghost-preview {
   opacity: 0.3;
   font-style: italic;
   color: var(--terminal-dim);
-  margin-top: var(--spacing-2);
-  display: flex;
-  align-items: baseline;
 }
 
 .ghost-preview .terminal-cursor {
@@ -833,10 +659,6 @@ watch(currentMessageIndex, (newValue) => {
 
 .completed-message {
   color: var(--terminal-text);
-  margin-top: var(--spacing-2);
-  display: flex;
-  align-items: baseline;
-  white-space: pre-wrap;
 }
 
 .completed-message .ghost-prefix {
@@ -855,10 +677,12 @@ watch(currentMessageIndex, (newValue) => {
 .ghost-prefix {
   color: var(--terminal-accent);
   font-weight: bold;
+  flex-shrink: 0;
 }
 
 .ghost-content {
   margin-left: var(--spacing-1);
+  flex: 1;
 }
 
 /* Context indicators */

@@ -87,6 +87,7 @@ const getAnimationSpeed = () => {
   word-wrap: break-word;
   overflow-wrap: break-word;
   padding-left: var(--spacing-2);
+  font-size: var(--font-size-base); /* Standardized base font size */
 }
 
 .message-header {
@@ -100,10 +101,12 @@ const getAnimationSpeed = () => {
 .message-prefix {
   font-weight: bold;
   color: var(--terminal-accent);
+  font-size: var(--font-size-base); /* Same as message content */
 }
 
 .message-meta {
   color: var(--terminal-dim);
+  font-size: var(--font-size-xs); /* Smaller for metadata */
 }
 
 .message-content {
@@ -111,6 +114,8 @@ const getAnimationSpeed = () => {
   word-wrap: break-word;
   width: 100%;
   max-width: 100%;
+  font-size: var(--font-size-base); /* Consistent content font size */
+  line-height: 1.4;
 }
 
 .message-line {
@@ -141,16 +146,37 @@ const getAnimationSpeed = () => {
 
 .message-meta {
   color: var(--terminal-dim);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs); /* Consistently smaller for metadata */
   flex-shrink: 0;
   margin-left: auto;
 }
 
 .message-tool_call .message-meta {
-  display: none;
+  display: none; /* Hide metadata for tool calls since they have their own styling */
 }
 
 .static-content {
   display: inline;
+  font-size: var(--font-size-base); /* Consistent with other content */
+}
+
+/* Message type specific styling */
+.message-human {
+  border-left: 2px solid var(--terminal-accent);
+  padding-left: var(--spacing-2);
+  margin-left: -2px;
+}
+
+.message-agent {
+  /* Default styling */
+}
+
+.message-tool_call {
+  /* Tool calls get special styling from ToolCallRenderer */
+}
+
+.message-system {
+  opacity: 0.8;
+  font-style: italic;
 }
 </style>
