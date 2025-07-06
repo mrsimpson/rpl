@@ -1,0 +1,46 @@
+{
+  "conversation_id": "mobile-test",
+  "next_message": null,
+  "history": [
+    [
+      {
+        "additional_context": "--- CONTEXT ENTRY BEGIN ---\nThis is a test context entry for mobile testing.\n--- CONTEXT ENTRY END ---\n",
+        "env_context": {
+          "env_state": {
+            "operating_system": "macos",
+            "current_directory": "/test"
+          }
+        },
+        "content": {
+          "Prompt": "Hello, can you help me test the mobile context functionality?"
+        },
+        "timestamp": "2025-07-06T06:00:00Z"
+      }
+    ],
+    [
+      {
+        "content": {
+          "Response": "I'd be happy to help you test the mobile context functionality! I can see you have some context information available. The context panel should slide up from the bottom on mobile devices and allow you to minimize it."
+        },
+        "timestamp": "2025-07-06T06:00:01Z"
+      }
+    ],
+    [
+      {
+        "additional_context": "--- CONTEXT ENTRY BEGIN ---\nThis is another context entry to test context changes.\n--- CONTEXT ENTRY END ---\n",
+        "content": {
+          "Prompt": "Great! Now let's test what happens when the context changes."
+        },
+        "timestamp": "2025-07-06T06:00:02Z"
+      }
+    ],
+    [
+      {
+        "content": {
+          "Response": "Perfect! When the context changes, the mobile context panel should automatically expand to show the new context, even if it was previously minimized."
+        },
+        "timestamp": "2025-07-06T06:00:03Z"
+      }
+    ]
+  ]
+}
