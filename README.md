@@ -35,14 +35,6 @@ A Vue.js application for replaying LLM conversations with an interactive termina
 - **Settings persistence** via localStorage
 - **Responsive design** for mobile, tablet, and desktop
 
-### 🔔 Smart Context Awareness
-- **Intelligent auto-pause**: Automatically pauses playback when new context documents appear
-- **Context notifications**: Non-intrusive toast notifications with resume controls
-- **Smart filtering**: Only pauses for NEW context documents, not repeated ones
-- **Immediate detection**: Context appears as soon as messages become visible
-- **Universal support**: Works with all message types including tool calls
-- **Mobile optimized**: Context notifications adapt to mobile and desktop layouts
-
 ## 🔗 URL-Based Loading
 
 The application supports direct conversation loading via URL parameters:

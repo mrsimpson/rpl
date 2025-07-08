@@ -1,63 +1,98 @@
 <template>
   <div class="settings-panel" :class="themeClasses">
     <div class="setting-group">
-      <label>Animation Speeds</label>
+      <label>Playback</label>
+      <div class="speed-control">
+        <label for="agent-speed">Agent messages (ms/char)</label>
+        <input
+          id="agent-speed"
+          type="range"
+          min="1"
+          max="20"
+          :value="settings.agentAnimationSpeed"
+          @input="
+            updateSetting(
+              'agentAnimationSpeed',
+              Number(($event.target as HTMLInputElement).value)
+            )
+          "
+        />
+        <span>{{ settings.agentAnimationSpeed }}ms</span>
+      </div>
       <div class="speed-controls">
         <div class="speed-control">
           <label for="human-speed">Human messages (ms/char)</label>
           <input
             id="human-speed"
             type="range"
-            min="10"
-            max="200"
+            min="1"
+            max="50"
             :value="settings.humanAnimationSpeed"
-            @input="updateSetting('humanAnimationSpeed', Number(($event.target as HTMLInputElement).value))"
+            @input="
+              updateSetting(
+                'humanAnimationSpeed',
+                Number(($event.target as HTMLInputElement).value)
+              )
+            "
           />
           <span>{{ settings.humanAnimationSpeed }}ms</span>
         </div>
-        
-        <div class="speed-control">
-          <label for="agent-speed">Agent messages (ms/char)</label>
+      </div>
+
+      <div class="checkbox-options">
+        <label class="checkbox-option">
           <input
-            id="agent-speed"
-            type="range"
-            min="1"
-            max="200"
-            :value="settings.agentAnimationSpeed"
-            @input="updateSetting('agentAnimationSpeed', Number(($event.target as HTMLInputElement).value))"
+            type="checkbox"
+            :checked="settings.pauseOnContext || false"
+            @change="
+              updateSetting(
+                'pauseOnContext',
+                ($event.target as HTMLInputElement).checked
+              )
+            "
           />
-          <span>{{ settings.agentAnimationSpeed }}ms</span>
+          <span>Pause on context changes</span>
+        </label>
+        <div class="setting-description">
+          Automatically pause playback when new context becomes available during
+          fast playback
         </div>
       </div>
     </div>
 
     <div class="setting-group">
-      <label>Terminal Theme</label>
-      <select :value="settings.terminalTheme" @change="updateSetting('terminalTheme', ($event.target as HTMLSelectElement).value as TerminalTheme)">
+      <label>Theme</label>
+      <select
+        :value="settings.terminalTheme"
+        @change="
+          updateSetting(
+            'terminalTheme',
+            ($event.target as HTMLSelectElement).value as TerminalTheme
+          )
+        "
+      >
         <option value="matrix">Matrix Green</option>
         <option value="high-contrast">High Contrast</option>
       </select>
-    </div>
 
-    <div class="setting-group">
-      <label>Window Style</label>
-      <select :value="settings.windowStyle" @change="updateSetting('windowStyle', ($event.target as HTMLSelectElement).value as WindowStyle)">
+      <select
+        :value="settings.windowStyle"
+        @change="
+          updateSetting(
+            'windowStyle',
+            ($event.target as HTMLSelectElement).value as WindowStyle
+          )
+        "
+      >
         <option value="auto">Auto-detect</option>
         <option value="macos">macOS</option>
         <option value="linux">Linux</option>
         <option value="windows">Windows</option>
       </select>
-    </div>
-
-    <div class="setting-group">
-      <label>App Theme</label>
       <div class="theme-controls">
         <button @click="toggleTheme" class="theme-toggle-btn">
-          {{ isDark ? '🌙 Dark Mode' : '☀️ Light Mode' }}
+          {{ isDark ? "🌙 Dark Mode" : "☀️ Light Mode" }}
         </button>
-        <span class="theme-info">
-          {{ isDark ? 'Dark theme active' : 'Light theme active' }}
-        </span>
       </div>
     </div>
 
@@ -68,45 +103,43 @@
           <input
             type="checkbox"
             :checked="settings.showProgress"
-            @change="updateSetting('showProgress', ($event.target as HTMLInputElement).checked)"
+            @change="
+              updateSetting(
+                'showProgress',
+                ($event.target as HTMLInputElement).checked
+              )
+            "
           />
           <span>Show progress indicators</span>
         </label>
-        
+
         <label class="checkbox-option">
           <input
             type="checkbox"
             :checked="settings.showGhostPreview"
-            @change="updateSetting('showGhostPreview', ($event.target as HTMLInputElement).checked)"
+            @change="
+              updateSetting(
+                'showGhostPreview',
+                ($event.target as HTMLInputElement).checked
+              )
+            "
           />
           <span>Ghost preview of next message</span>
         </label>
-        
+
         <label class="checkbox-option">
           <input
             type="checkbox"
             :checked="settings.enableSounds"
-            @change="updateSetting('enableSounds', ($event.target as HTMLInputElement).checked)"
+            @change="
+              updateSetting(
+                'enableSounds',
+                ($event.target as HTMLInputElement).checked
+              )
+            "
           />
           <span>Enable sound effects</span>
         </label>
-      </div>
-    </div>
-
-    <div class="setting-group">
-      <label>Context Behavior</label>
-      <div class="checkbox-options">
-        <label class="checkbox-option">
-          <input
-            type="checkbox"
-            :checked="settings.pauseOnContext || false"
-            @change="updateSetting('pauseOnContext', ($event.target as HTMLInputElement).checked)"
-          />
-          <span>Pause on context changes</span>
-        </label>
-        <div class="setting-description">
-          Automatically pause playback when new context becomes available during fast playback
-        </div>
       </div>
     </div>
 
@@ -119,46 +152,49 @@
 </template>
 
 <script setup lang="ts">
-import { useTheme } from '../composables/useTheme'
-import type { Settings, TerminalTheme, WindowStyle } from '../types'
+import { useTheme } from "../composables/useTheme";
+import type { Settings, TerminalTheme, WindowStyle } from "../types";
 
 interface Props {
-  settings: Settings
+  settings: Settings;
 }
 
 interface Props {
-  settings: Settings
+  settings: Settings;
 }
 
 interface Emits {
-  (e: 'update-settings', settings: Partial<Settings>): void
+  (e: "update-settings", settings: Partial<Settings>): void;
 }
 
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
+const props = defineProps<Props>();
+const emit = defineEmits<Emits>();
 
 // Use theme composable
-const { themeClasses, isDark, toggleTheme } = useTheme()
+const { themeClasses, isDark, toggleTheme } = useTheme();
 void props;
 // Props and emit are used in template and methods
 
-const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K]) => {
-  emit('update-settings', { [key]: value })
-}
+const updateSetting = <K extends keyof Settings>(
+  key: K,
+  value: Settings[K]
+) => {
+  emit("update-settings", { [key]: value });
+};
 
 const resetSettings = () => {
-  emit('update-settings', {
+  emit("update-settings", {
     humanAnimationSpeed: 50,
     agentAnimationSpeed: 30,
-    terminalTheme: 'matrix',
-    windowStyle: 'auto',
+    terminalTheme: "matrix",
+    windowStyle: "auto",
     showProgress: true,
     showGhostPreview: true,
     enableSounds: false,
     pauseOnContext: false,
     contextPanelWidth: 400,
-  })
-}
+  });
+};
 </script>
 
 <style scoped>

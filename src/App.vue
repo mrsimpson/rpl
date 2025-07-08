@@ -10,7 +10,11 @@
         class="settings-dialog-overlay"
         @click="closeSettings"
       >
-        <div class="settings-dialog" :class="[themeClasses, windowStyleClasses]" @click.stop>
+        <div
+          class="settings-dialog"
+          :class="[themeClasses, windowStyleClasses]"
+          @click.stop
+        >
           <div class="settings-header">
             <h3>Settings</h3>
             <button @click="closeSettings" class="close-btn">×</button>
@@ -59,8 +63,8 @@ const showSettings = ref(false);
 const settings = reactive<Settings>({
   humanAnimationSpeed: 50,
   agentAnimationSpeed: 30,
-  terminalTheme: "matrix",        // NEW: Simplified terminal theme
-  windowStyle: "auto",            // NEW: Auto-detect OS style
+  terminalTheme: "matrix", // NEW: Simplified terminal theme
+  windowStyle: "auto", // NEW: Auto-detect OS style
   showProgress: true,
   showGhostPreview: true,
   enableSounds: false,
@@ -112,7 +116,7 @@ onMounted(() => {
 /* Minimal global styles - theme-aware components handle their own styling */
 .app {
   min-height: 100vh;
-  font-family: 'Fira Code', 'Monaco', 'Cascadia Code', 'Ubuntu Mono', monospace;
+  font-family: "Fira Code", "Monaco", "Cascadia Code", "Ubuntu Mono", monospace;
   transition: all 0.3s ease;
 }
 
@@ -152,8 +156,8 @@ onMounted(() => {
   border-radius: 8px;
   width: 90%;
   max-width: 500px;
-  max-height: 80vh;
-  overflow: hidden;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 /* Light theme for settings dialog */
@@ -171,17 +175,17 @@ onMounted(() => {
 /* OS-specific styling for settings dialog */
 .settings-dialog.macos {
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .settings-dialog.windows {
   border-radius: 0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .settings-dialog.linux {
   border-radius: 4px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .settings-header {
@@ -243,7 +247,6 @@ onMounted(() => {
 
 .settings-content {
   padding: 1rem;
-  max-height: 60vh;
   overflow-y: auto;
 }
 </style>
