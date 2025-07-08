@@ -22,11 +22,6 @@
         </div>
         <button v-if="dismissible" @click.stop="dismiss" class="toast-close" aria-label="Close notification">×</button>
       </div>
-      
-      <!-- Auto-dismiss progress bar -->
-      <div v-if="showProgress && autoDismiss" class="progress-bar">
-        <div class="progress-fill" :style="{ width: progressWidth + '%' }"></div>
-      </div>
     </div>
   </Transition>
 </template>

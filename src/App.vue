@@ -65,7 +65,6 @@ const settings = reactive<Settings>({
   agentAnimationSpeed: 30,
   terminalTheme: "matrix", // NEW: Simplified terminal theme
   windowStyle: "auto", // NEW: Auto-detect OS style
-  showProgress: true,
   showGhostPreview: true,
   enableSounds: false,
   contextPanelWidth: 400,
@@ -96,7 +95,6 @@ onMounted(() => {
         agentAnimationSpeed: parsed.agentAnimationSpeed,
         terminalTheme: parsed.terminalTheme || "matrix",
         windowStyle: parsed.windowStyle || "auto",
-        showProgress: parsed.showProgress,
         showGhostPreview: parsed.showGhostPreview,
         enableSounds: parsed.enableSounds,
         contextPanelWidth: parsed.contextPanelWidth,

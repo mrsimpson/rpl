@@ -80,7 +80,7 @@ onUnmounted(() => {
 
 .message-counter {
   font-family: var(--font-mono);
-  font-size: var(--text-sm);
+  font-size: 0.7rem;
   color: var(--text-muted);
   white-space: nowrap;
 }

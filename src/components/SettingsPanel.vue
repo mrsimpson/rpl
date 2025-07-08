@@ -102,20 +102,6 @@
         <label class="checkbox-option">
           <input
             type="checkbox"
-            :checked="settings.showProgress"
-            @change="
-              updateSetting(
-                'showProgress',
-                ($event.target as HTMLInputElement).checked
-              )
-            "
-          />
-          <span>Show progress indicators</span>
-        </label>
-
-        <label class="checkbox-option">
-          <input
-            type="checkbox"
             :checked="settings.showGhostPreview"
             @change="
               updateSetting(
@@ -188,7 +174,6 @@ const resetSettings = () => {
     agentAnimationSpeed: 30,
     terminalTheme: "matrix",
     windowStyle: "auto",
-    showProgress: true,
     showGhostPreview: true,
     enableSounds: false,
     pauseOnContext: false,

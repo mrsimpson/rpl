@@ -40,9 +40,8 @@ export interface ContextItem {
 export interface Settings {
   humanAnimationSpeed: number
   agentAnimationSpeed: number
-  terminalTheme: TerminalTheme  // NEW: Simplified terminal theme
-  windowStyle: WindowStyle      // NEW: Enhanced window styling with auto-detect
-  showProgress: boolean
+  terminalTheme: TerminalTheme 
+  windowStyle: WindowStyle
   showGhostPreview: boolean
   enableSounds: boolean
   // Context-related settings
@@ -50,8 +49,6 @@ export interface Settings {
   contextPanelWidth?: number
   pauseOnContext?: boolean
   autoShowContext?: boolean
-  // REMOVED: theme (old terminal theme system)
-  // Light/dark mode handled by useTheme composable, not in settings
 }
 
 export interface SourceAdapter {
