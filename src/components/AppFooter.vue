@@ -127,8 +127,8 @@ const { themeClasses, isDark } = useTheme()
 }
 
 .icon {
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
 }
 
 /* Responsive design */

@@ -737,7 +737,6 @@ watch(currentMessageIndex, (newValue) => {
 }
 
 .ghost-preview {
-  opacity: 0.3;
   font-style: italic;
   color: var(--terminal-dim);
 }
