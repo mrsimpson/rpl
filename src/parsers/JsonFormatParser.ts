@@ -10,6 +10,11 @@ export class JsonFormatParser implements FormatParser {
         return this.parseQDeveloperFormat(jsonData)
       }
       
+      // Handle Amazon Q flat array format
+      if (this.isAmazonQFormat(jsonData)) {
+        return this.parseAmazonQFormat(jsonData)
+      }
+      
       // Handle generic JSON format
       return this.parseGenericFormat(jsonData)
       
@@ -22,6 +27,15 @@ export class JsonFormatParser implements FormatParser {
     return data.conversation_id && 
            data.history && 
            Array.isArray(data.history)
+  }
+
+  private isAmazonQFormat(data: any): boolean {
+    return Array.isArray(data) && 
+           data.length > 0 && 
+           data.some((item: any) => 
+             (item.content && item.content.ToolUseResults) || 
+             item.Response
+           )
   }
 
   private parseQDeveloperFormat(data: any): ConversationData {
@@ -121,6 +135,19 @@ export class JsonFormatParser implements FormatParser {
             }
           })
         }
+
+        // Handle Response messages
+        if (assistantTurn?.Response) {
+          messages.push({
+            id: (messageId++).toString(),
+            type: 'agent',
+            content: assistantTurn.Response.content,
+            timestamp: new Date().toISOString(),
+            metadata: {
+              messageId: assistantTurn.Response.message_id
+            }
+          })
+        }
       }
     }
 
@@ -130,6 +157,58 @@ export class JsonFormatParser implements FormatParser {
         timestamp: new Date().toISOString(),
         format: 'json-qdev',
         source: data.conversation_id
+      },
+      messages
+    }
+  }
+
+  private parseAmazonQFormat(data: any[]): ConversationData {
+    const messages: Message[] = []
+    let messageId = 1
+
+    for (const item of data) {
+      // Handle ToolUseResults
+      if (item.content && item.content.ToolUseResults) {
+        const toolResults = item.content.ToolUseResults.tool_use_results
+        for (const result of toolResults) {
+          messages.push({
+            id: (messageId++).toString(),
+            type: 'tool_call',
+            content: JSON.stringify({
+              type: 'tool_result',
+              tool_use_id: result.tool_use_id,
+              content: result.content,
+              status: result.status
+            }),
+            timestamp: new Date().toISOString(),
+            metadata: {
+              toolId: result.tool_use_id,
+              toolType: 'result',
+              status: result.status
+            }
+          })
+        }
+      }
+
+      // Handle Response messages
+      if (item.Response) {
+        messages.push({
+          id: (messageId++).toString(),
+          type: 'agent',
+          content: item.Response.content,
+          timestamp: new Date().toISOString(),
+          metadata: {
+            messageId: item.Response.message_id
+          }
+        })
+      }
+    }
+
+    return {
+      metadata: {
+        title: 'Amazon Q Conversation',
+        timestamp: new Date().toISOString(),
+        format: 'json-amazonq'
       },
       messages
     }
