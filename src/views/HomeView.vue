@@ -28,8 +28,8 @@ interface LoadConversationEvent {
 const handleLoadConversation = async (event: LoadConversationEvent) => {
   const { data, source, contextItems = [] } = event
 
-  if (source === 'local') {
-    // Local file loading - set data in composable and navigate
+  if (source === 'local-file' || source === 'local-folder') {
+    // Local file/folder loading - set data in composable and navigate
     setLocalData(data, contextItems)
     await router.push('/conversation')
   } else {

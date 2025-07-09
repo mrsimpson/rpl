@@ -82,7 +82,7 @@
             <FolderIcon class="option-icon" />
             <div class="option-info">
               <h4>Conversation + Context</h4>
-              <p>Select a folder with conversation.txt and context files (images, videos, etc.)</p>
+              <p>Select a folder with conversation.txt or conversation.json and context files (images, videos, etc.)</p>
             </div>
           </div>
           <button @click="handleFolderSelection" :disabled="!supportsFolderSelection" class="load-btn secondary">
@@ -237,18 +237,21 @@ const handleFolderSelection = async () => {
     // Use the existing folder selection logic
     const directoryHandle = await (window as any).showDirectoryPicker()
     
-    // Find conversation.txt file
+    // Find conversation file (txt or json)
     let conversationFile = null
+    let conversationFileName = ''
     const contextItems: ContextItem[] = []
 
     for await (const [name, handle] of directoryHandle.entries()) {
       if (handle.kind === 'file') {
-        if (name === 'conversation.txt') {
+        if (name === 'conversation.txt' || name === 'conversation.json') {
           conversationFile = await handle.getFile()
+          conversationFileName = name
         } else {
           // Check if it's a context file (image, video, code, etc.)
           const file = await handle.getFile()
-          const contextItem = createContextItem(file, name)
+          const fileUrl = URL.createObjectURL(file)
+          const contextItem = createContextItem(file.name, fileUrl)
           if (contextItem) {
             contextItems.push(contextItem)
           }
@@ -257,16 +260,17 @@ const handleFolderSelection = async () => {
     }
 
     if (!conversationFile) {
-      throw new Error('No conversation.txt file found in the selected folder')
+      throw new Error('No conversation.txt or conversation.json file found in the selected folder')
     }
 
-    // Parse the conversation file
+    // Parse the conversation file with appropriate parser
     const content = await conversationFile.text()
-    const parser = new TextFormatParser() // Assume text format for folder-based conversations
+    const isJsonFile = conversationFileName.endsWith('.json')
+    const parser = isJsonFile ? new JsonFormatParser() : new TextFormatParser()
     const conversationData = await parser.parse(content)
 
     // Show success toast
-    showToastMessage(`Successfully loaded conversation with ${contextItems.length} context items`, 'success')
+    showToastMessage(`Successfully loaded ${conversationFileName} with ${contextItems.length} context items`, 'success')
 
     // Emit folder loading event
     emit('loadConversation', {
