@@ -11,6 +11,7 @@
         <ToolCallRenderer
           v-if="message.type === 'tool_call'"
           :content="message.content"
+          :tool-response="toolResponse"
         />
         <TypewriterText
           v-else-if="isCurrent"
@@ -41,6 +42,7 @@ const props = defineProps<{
   settings: Settings;
   paused?: boolean;
   contextCount?: number;
+  toolResponse?: Message | null;
 }>();
 
 defineEmits<{

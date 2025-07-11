@@ -43,7 +43,9 @@ export class JsonFormatParser implements FormatParser {
     let messageId = 1
 
     // Process conversation history
-    for (const historyItem of data.history) {
+    for (let i = 0; i < data.history.length; i++) {
+      const historyItem = data.history[i]
+      
       if (Array.isArray(historyItem) && historyItem.length >= 2) {
         const [userTurn, assistantTurn] = historyItem
 
@@ -55,6 +57,29 @@ export class JsonFormatParser implements FormatParser {
             content: userTurn.content.Prompt.prompt,
             timestamp: new Date().toISOString()
           })
+        }
+
+        // Handle tool results from the first element if it's a ToolUseResults
+        if (userTurn?.content?.ToolUseResults) {
+          const results = userTurn.content.ToolUseResults.tool_use_results
+          for (const result of results) {
+            messages.push({
+              id: (messageId++).toString(),
+              type: 'tool_call',
+              content: JSON.stringify({
+                type: 'tool_result',
+                tool_use_id: result.tool_use_id,
+                content: result.content,
+                status: result.status
+              }),
+              timestamp: new Date().toISOString(),
+              metadata: {
+                toolId: result.tool_use_id,
+                toolType: 'result',
+                status: result.status
+              }
+            })
+          }
         }
 
         // Handle different assistant response types
@@ -96,8 +121,10 @@ export class JsonFormatParser implements FormatParser {
 
         // Handle tool results
         if (assistantTurn?.content?.ToolUseResults) {
+          console.log('Processing tool results:', assistantTurn.content.ToolUseResults.tool_use_results.length)
           const results = assistantTurn.content.ToolUseResults.tool_use_results
           for (const result of results) {
+            console.log('Adding tool result:', result.tool_use_id)
             messages.push({
               id: (messageId++).toString(),
               type: 'tool_call',

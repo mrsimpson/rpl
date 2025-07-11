@@ -30,6 +30,7 @@
           <div 
             v-for="(message, index) in visibleMessages"
             :key="message.id"
+            v-show="!shouldHideMessage(message)"
             class="message-wrapper"
             :class="{ 'has-context': hasContextForMessage(index) }"
           >
@@ -42,6 +43,7 @@
               :settings="settings"
               :paused="!isPlaying"
               :context-count="getContextForMessage(index).length"
+              :tool-response="getToolResponseForMessage(message)"
               @animation-complete="onMessageComplete"
             />
             
@@ -196,6 +198,49 @@ const getContextForMessage = (messageIndex: number): ContextItem[] => {
 
 const hasContextForMessage = (messageIndex: number): boolean => {
   return getContextForMessage(messageIndex).length > 0
+}
+
+// Tool response mapping functionality
+const toolResponseMap = computed(() => {
+  const map = new Map<string, Message>()
+  
+  // Build map of tool_use_id -> tool_result message
+  props.conversationData.messages.forEach(message => {
+    if (message.type === 'tool_call' && message.metadata?.toolType === 'result') {
+      const toolId = message.metadata.toolId
+      if (toolId) {
+        map.set(toolId, message)
+      }
+    }
+  })
+  
+  return map
+})
+
+const getToolResponseForMessage = (message: Message): Message | null => {
+  if (message.type === 'tool_call' && message.metadata?.toolType === 'use') {
+    const toolId = message.metadata.toolId
+    if (toolId) {
+      return toolResponseMap.value.get(toolId) || null
+    }
+  }
+  return null
+}
+
+const shouldHideMessage = (message: Message): boolean => {
+  // Hide standalone tool_result messages if they have a corresponding tool_use
+  if (message.type === 'tool_call' && message.metadata?.toolType === 'result') {
+    const toolId = message.metadata.toolId
+    if (toolId) {
+      // Check if there's a tool_use message with this ID
+      return props.conversationData.messages.some(msg => 
+        msg.type === 'tool_call' && 
+        msg.metadata?.toolType === 'use' && 
+        msg.metadata?.toolId === toolId
+      )
+    }
+  }
+  return false
 }
 
 // Pause reason tracking
@@ -378,6 +423,14 @@ const processAgentMessages = () => {
   const nextMsg = props.conversationData.messages[currentMessageIndex.value + 1];
   
   if (nextMsg && nextMsg.type !== 'human') {
+    // Check if we should skip this message because it's hidden
+    if (shouldHideMessage(nextMsg)) {
+      // Skip hidden message and continue to the next one
+      currentMessageIndex.value++;
+      processAgentMessages();
+      return;
+    }
+    
     // Show next non-human message
     currentMessageIndex.value++;
     conversationState.value = 'agent_typing';
@@ -470,6 +523,14 @@ const continuePlayback = () => {
   const nextMsg = props.conversationData.messages[currentMessageIndex.value + 1];
   
   if (nextMsg) {
+    // Check if we should skip this message because it's hidden
+    if (shouldHideMessage(nextMsg)) {
+      // Skip hidden message and continue to the next one
+      currentMessageIndex.value++;
+      continuePlayback();
+      return;
+    }
+    
     if (nextMsg.type === 'human') {
       // Next is user message - don't advance index, go back to waiting state
       // This will show the ghost preview and wait for Tab or Play
