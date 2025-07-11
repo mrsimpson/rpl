@@ -72,7 +72,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch, readonly } from
 import ApplicationWindow from "./ApplicationWindow.vue";
 import MessageRenderer from "./MessageRenderer.vue";
 import { useTheme } from '../composables/useTheme'
-import type { ConversationData, Settings, ContextItem, TerminalThemeDefinition } from "../types";
+import type { ConversationData, Settings, ContextItem, TerminalThemeDefinition, Message } from "../types";
 
 // Terminal theme definitions - local to this component
 const terminalThemes: Record<string, TerminalThemeDefinition> = {
