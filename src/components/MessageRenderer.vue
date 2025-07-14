@@ -19,6 +19,7 @@
           :speed="getAnimationSpeed()"
           :paused="paused"
           @complete="$emit('animationComplete')"
+          @typing="$emit('characterTyped', $event)"
         />
         <span v-else class="static-content">{{ message.content }}</span>
       </span>
@@ -47,6 +48,7 @@ const props = defineProps<{
 
 defineEmits<{
   animationComplete: [];
+  characterTyped: [character: string];
 }>();
 
 const messagePrefix = computed(() => {

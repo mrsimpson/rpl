@@ -45,6 +45,7 @@
               :context-count="getContextForMessage(index).length"
               :tool-response="getToolResponseForMessage(message)"
               @animation-complete="onMessageComplete"
+              @character-typed="onCharacterTyped"
             />
             
           </div>
@@ -394,6 +395,16 @@ const startPlaybackUntilNextUser = () => {
 };
 
 
+const completeCurrentMessage = () => {
+  // Force complete the current typing message by triggering the complete event
+  // This will be handled by the MessageRenderer/TypewriterText components
+  if (conversationState.value === 'agent_typing') {
+    // The message will complete and onMessageComplete will be called
+    // We can trigger this by emitting a custom event that TypewriterText can listen for
+    window.dispatchEvent(new CustomEvent('force-complete-typing'));
+  }
+};
+
 const completeUserMessage = () => {
   // TAB pressed - show completed user message
   conversationState.value = 'user_typing';
@@ -491,11 +502,22 @@ const initializeConversation = () => {
   }
 };
 
+const onCharacterTyped = (character: string) => {
+  // Scroll to bottom when characters are typed, especially for newlines
+  // Use a small delay to ensure DOM has updated
+  nextTick(() => {
+    scrollToBottom();
+  });
+};
+
 const onMessageComplete = () => {
   console.log('Message animation complete, state:', conversationState.value, 'isPlaying:', isPlaying.value);
   
   // Emit message completion event for context system
   emit('messageComplete', currentMessageIndex.value);
+  
+  // Always scroll to bottom when a message completes to ensure visibility
+  scrollToBottom();
   
   if (conversationState.value === 'agent_typing') {
     if (isPlaying.value) {
@@ -567,6 +589,8 @@ const handleKeydown = (event: KeyboardEvent) => {
       event.preventDefault();
       if (conversationState.value === 'waiting_for_user') {
         completeUserMessage();
+      } else if (conversationState.value === 'agent_typing') {
+        completeCurrentMessage();
       }
       break;
     case "Escape":
