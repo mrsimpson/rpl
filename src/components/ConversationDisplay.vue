@@ -502,7 +502,7 @@ const initializeConversation = () => {
   }
 };
 
-const onCharacterTyped = (character: string) => {
+const onCharacterTyped = () => {
   // Scroll to bottom when characters are typed, especially for newlines
   // Use a small delay to ensure DOM has updated
   nextTick(() => {
