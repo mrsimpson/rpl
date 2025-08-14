@@ -1,13 +1,15 @@
 import type { FormatParser, ConversationData, Message } from '../types'
+import { QDeveloperParserFactory } from './QDeveloperParserFactory'
+import { QDeveloperFormatDetector } from './QDeveloperFormatDetector'
 
 export class JsonFormatParser implements FormatParser {
   async parse(content: string): Promise<ConversationData> {
     try {
       const jsonData = JSON.parse(content)
       
-      // Handle Q-Developer format
-      if (this.isQDeveloperFormat(jsonData)) {
-        return this.parseQDeveloperFormat(jsonData)
+      // Handle Q-Developer format using version-based parsers
+      if (QDeveloperFormatDetector.isQDeveloperFormat(jsonData)) {
+        return QDeveloperParserFactory.parse(jsonData)
       }
       
       // Handle Amazon Q flat array format
@@ -23,12 +25,6 @@ export class JsonFormatParser implements FormatParser {
     }
   }
 
-  private isQDeveloperFormat(data: any): boolean {
-    return data.conversation_id && 
-           data.history && 
-           Array.isArray(data.history)
-  }
-
   private isAmazonQFormat(data: any): boolean {
     return Array.isArray(data) && 
            data.length > 0 && 
@@ -36,157 +32,6 @@ export class JsonFormatParser implements FormatParser {
              (item.content && item.content.ToolUseResults) || 
              item.Response
            )
-  }
-
-  private parseQDeveloperFormat(data: any): ConversationData {
-    const messages: Message[] = []
-    let messageId = 1
-
-    // Process conversation history
-    for (let i = 0; i < data.history.length; i++) {
-      const historyItem = data.history[i]
-      
-      if (Array.isArray(historyItem) && historyItem.length >= 2) {
-        const [userTurn, assistantTurn] = historyItem
-
-        // Extract user message
-        if (userTurn?.content?.Prompt?.prompt) {
-          messages.push({
-            id: (messageId++).toString(),
-            type: 'human',
-            content: userTurn.content.Prompt.prompt,
-            timestamp: new Date().toISOString()
-          })
-        }
-
-        // Handle tool results from the first element if it's a ToolUseResults
-        if (userTurn?.content?.ToolUseResults) {
-          const results = userTurn.content.ToolUseResults.tool_use_results
-          for (const result of results) {
-            messages.push({
-              id: (messageId++).toString(),
-              type: 'tool_call',
-              content: JSON.stringify({
-                type: 'tool_result',
-                tool_use_id: result.tool_use_id,
-                content: result.content,
-                status: result.status
-              }),
-              timestamp: new Date().toISOString(),
-              metadata: {
-                toolId: result.tool_use_id,
-                toolType: 'result',
-                status: result.status
-              }
-            })
-          }
-        }
-
-        // Handle different assistant response types
-        if (assistantTurn?.ToolUse) {
-          const toolUse = assistantTurn.ToolUse
-          
-          // Add agent message if there's content
-          if (toolUse.content) {
-            messages.push({
-              id: (messageId++).toString(),
-              type: 'agent',
-              content: toolUse.content,
-              timestamp: new Date().toISOString()
-            })
-          }
-
-          // Add tool calls
-          if (toolUse.tool_uses) {
-            for (const tool of toolUse.tool_uses) {
-              messages.push({
-                id: (messageId++).toString(),
-                type: 'tool_call',
-                content: JSON.stringify({
-                  type: 'tool_use',
-                  name: tool.name,
-                  args: tool.args,
-                  id: tool.id
-                }),
-                timestamp: new Date().toISOString(),
-                metadata: {
-                  toolName: tool.name,
-                  toolId: tool.id,
-                  toolType: 'use'
-                }
-              })
-            }
-          }
-        }
-
-        // Handle tool results
-        if (assistantTurn?.content?.ToolUseResults) {
-          console.log('Processing tool results:', assistantTurn.content.ToolUseResults.tool_use_results.length)
-          const results = assistantTurn.content.ToolUseResults.tool_use_results
-          for (const result of results) {
-            console.log('Adding tool result:', result.tool_use_id)
-            messages.push({
-              id: (messageId++).toString(),
-              type: 'tool_call',
-              content: JSON.stringify({
-                type: 'tool_result',
-                tool_use_id: result.tool_use_id,
-                content: result.content,
-                status: result.status
-              }),
-              timestamp: new Date().toISOString(),
-              metadata: {
-                toolId: result.tool_use_id,
-                toolType: 'result',
-                status: result.status
-              }
-            })
-          }
-        }
-
-        // Handle cancelled tool uses
-        if (assistantTurn?.content?.CancelledToolUses) {
-          const cancelled = assistantTurn.content.CancelledToolUses
-          messages.push({
-            id: (messageId++).toString(),
-            type: 'tool_call',
-            content: JSON.stringify({
-              type: 'tool_cancelled',
-              prompt: cancelled.prompt,
-              tool_use_results: cancelled.tool_use_results
-            }),
-            timestamp: new Date().toISOString(),
-            metadata: {
-              toolType: 'cancelled',
-              reason: cancelled.prompt
-            }
-          })
-        }
-
-        // Handle Response messages
-        if (assistantTurn?.Response) {
-          messages.push({
-            id: (messageId++).toString(),
-            type: 'agent',
-            content: assistantTurn.Response.content,
-            timestamp: new Date().toISOString(),
-            metadata: {
-              messageId: assistantTurn.Response.message_id
-            }
-          })
-        }
-      }
-    }
-
-    return {
-      metadata: {
-        title: 'Q-Developer Conversation',
-        timestamp: new Date().toISOString(),
-        format: 'json-qdev',
-        source: data.conversation_id
-      },
-      messages
-    }
   }
 
   private parseAmazonQFormat(data: any[]): ConversationData {
