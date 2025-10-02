@@ -119,12 +119,22 @@ export abstract class BaseQDeveloperParser implements QDeveloperVersionParser {
   }
 
   protected parseUserTurn(userTurn: any, messages: Message[], messageId: { value: number }): void {
-    // Extract user message
+    // Extract user message from Prompt
     if (userTurn?.content?.Prompt?.prompt) {
       messages.push({
         id: (messageId.value++).toString(),
         type: 'human',
         content: userTurn.content.Prompt.prompt,
+        timestamp: userTurn.timestamp || new Date().toISOString()
+      })
+    }
+
+    // Extract user message from CancelledToolUses
+    if (userTurn?.content?.CancelledToolUses?.prompt) {
+      messages.push({
+        id: (messageId.value++).toString(),
+        type: 'human',
+        content: userTurn.content.CancelledToolUses.prompt,
         timestamp: userTurn.timestamp || new Date().toISOString()
       })
     }
