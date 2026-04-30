@@ -7,6 +7,11 @@ export class JsonFormatParser implements FormatParser {
     try {
       const jsonData = JSON.parse(content)
       
+      // Handle Kiro session export format
+      if (jsonData.format === 'kiro-session-export-v1') {
+        return this.parseKiroFormat(jsonData)
+      }
+
       // Handle Q-Developer format using version-based parsers
       if (QDeveloperFormatDetector.isQDeveloperFormat(jsonData)) {
         return QDeveloperParserFactory.parse(jsonData)
@@ -22,6 +27,66 @@ export class JsonFormatParser implements FormatParser {
       
     } catch (error) {
       throw new Error(`Invalid JSON format: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  private parseKiroFormat(data: any): ConversationData {
+    const messages: Message[] = []
+    let messageId = 1
+    const entries: any[] = data.log_entries || []
+
+    for (const entry of entries) {
+      const kind: string = entry.kind
+      const entryData = entry.data || {}
+
+      if (kind === 'Prompt') {
+        const text = (entryData.content || [])
+          .filter((c: any) => c.kind === 'text')
+          .map((c: any) => c.data)
+          .join('\n')
+        if (text) {
+          messages.push({
+            id: (messageId++).toString(),
+            type: 'human',
+            content: text,
+            timestamp: entryData.meta?.timestamp
+              ? new Date(entryData.meta.timestamp * 1000).toISOString()
+              : new Date().toISOString()
+          })
+        }
+      } else if (kind === 'AssistantMessage') {
+        for (const part of (entryData.content || [])) {
+          if (part.kind === 'text' && part.data) {
+            messages.push({
+              id: (messageId++).toString(),
+              type: 'agent',
+              content: part.data,
+              timestamp: new Date().toISOString()
+            })
+          } else if (part.kind === 'toolUse') {
+            messages.push({
+              id: (messageId++).toString(),
+              type: 'tool_call',
+              content: JSON.stringify(part.data?.input ?? {}),
+              timestamp: new Date().toISOString(),
+              metadata: {
+                toolId: part.data?.toolUseId,
+                toolName: part.data?.name
+              }
+            })
+          }
+        }
+      }
+      // ToolResults entries are skipped — they are internal plumbing
+    }
+
+    return {
+      metadata: {
+        title: data.metadata?.title || 'Kiro Conversation',
+        timestamp: data.metadata?.created_at || new Date().toISOString(),
+        format: 'json-kiro'
+      },
+      messages
     }
   }
 
