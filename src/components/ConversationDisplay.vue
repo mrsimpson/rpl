@@ -450,15 +450,15 @@ const processAgentMessages = () => {
     // Check for context immediately when message becomes visible
     checkAndEmitContext(currentMessageIndex.value);
     
-    // If it's a tool_call, continue immediately since it doesn't animate
-    if (nextMsg.type === 'tool_call') {
+    // If it's a tool_call or system message (e.g. compaction), continue immediately since they don't animate
+    if (nextMsg.type === 'tool_call' || nextMsg.type === 'system') {
       setTimeout(() => {
         if (isPlaying.value) {
           continuePlayback();
         } else {
           conversationState.value = 'waiting_for_user';
         }
-      }, 1000); // Brief delay to show the tool call
+      }, 1000); // Brief delay to show the message
     }
     // For agent messages, onMessageComplete will handle continuation when animation finishes
   } else {

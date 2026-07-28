@@ -180,6 +180,21 @@ export class JsonFormatParser implements FormatParser {
             metadata: { isSteering: true }
           })
         }
+      } else if (kind === 'Compaction') {
+        const summary: string = entryData.summary || ''
+        const strategy: Record<string, any> = entryData.strategy || {}
+        if (summary) {
+          messages.push({
+            id: (messageId++).toString(),
+            type: 'system',
+            content: summary,
+            timestamp: new Date().toISOString(),
+            metadata: {
+              isCompaction: true,
+              strategy
+            }
+          })
+        }
       }
     }
 
