@@ -13,9 +13,12 @@ class ToolRendererRegistry {
   private renderers = new Map<string, ToolRenderer>()
 
   constructor() {
-    // Register known tool renderers
+    // Q-Developer format tool names
     this.register('fs_read', FsReadRenderer)
     this.register('fs_write', FsWriteRenderer)
+    // Kiro built-in tool names (input already normalized to canonical args by parser)
+    this.register('read', FsReadRenderer)
+    this.register('write', FsWriteRenderer)
   }
 
   register(toolName: string, renderer: ToolRenderer): void {
