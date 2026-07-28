@@ -1,7 +1,7 @@
 <template>
   <div
     class="message"
-    :class="[`message-${message.type}`, { 'is-current': isCurrent }]"
+    :class="[`message-${message.type}`, { 'is-current': isCurrent, 'is-steering': message.metadata?.isSteering }]"
   >
     <div class="message-line">
       <span v-if="!!messagePrefix" class="message-prefix">{{
@@ -52,6 +52,7 @@ defineEmits<{
 }>();
 
 const messagePrefix = computed(() => {
+  if (props.message.metadata?.isSteering) return '⤷'
   switch (props.message.type) {
     case "human":
       return ">";
@@ -165,6 +166,16 @@ const getAnimationSpeed = () => {
 /* Message type specific styling */
 .message-system {
   opacity: 0.8;
+  font-style: italic;
+}
+
+/* Steering messages — user input sent mid-agent-turn */
+.message-human.is-steering .message-prefix {
+  color: var(--terminal-dim);
+}
+
+.message-human.is-steering .message-content {
+  opacity: 0.75;
   font-style: italic;
 }
 </style>

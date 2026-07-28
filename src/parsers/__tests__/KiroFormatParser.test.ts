@@ -187,3 +187,201 @@ describe('Kiro Session Export Format', () => {
     expect(result.messages[1].type).toBe('agent')
   })
 })
+
+// --- New format features (results map + steering messages) ---
+describe('Kiro Session Export Format — new features', () => {
+  const parser = new JsonFormatParser()
+
+  const KIRO_WITH_RESULTS_MAP = {
+    format: 'kiro-session-export-v1',
+    metadata: { title: 'Results map test', created_at: '2026-07-28T09:00:00Z' },
+    log_entries: [
+      {
+        version: 'v1',
+        kind: 'Prompt',
+        data: {
+          message_id: 'p1',
+          content: [{ kind: 'text', data: 'Do something.' }],
+          meta: { timestamp: 1785230000 }
+        }
+      },
+      {
+        version: 'v1',
+        kind: 'AssistantMessage',
+        data: {
+          message_id: 'a1',
+          content: [
+            { kind: 'text', data: 'I will call a tool.' },
+            {
+              kind: 'toolUse',
+              data: {
+                toolUseId: 'tooluse_MCP1',
+                name: 'whats_next',
+                input: { user_input: 'Do something.' }
+              }
+            },
+            {
+              kind: 'toolUse',
+              data: {
+                toolUseId: 'tooluse_BUILTIN1',
+                name: 'read',
+                input: { operations: [{ mode: 'Line', path: '/tmp/foo.txt' }] }
+              }
+            }
+          ]
+        }
+      },
+      {
+        version: 'v1',
+        kind: 'ToolResults',
+        data: {
+          message_id: 'tr1',
+          content: [
+            {
+              kind: 'toolResult',
+              data: {
+                toolUseId: 'tooluse_MCP1',
+                content: [{ kind: 'json', data: { phase: 'explore' } }],
+                status: 'success'
+              }
+            },
+            {
+              kind: 'toolResult',
+              data: {
+                toolUseId: 'tooluse_BUILTIN1',
+                content: [{ kind: 'json', data: { exit_status: 'exit status: 0', stdout: 'hello' } }],
+                status: 'success'
+              }
+            }
+          ],
+          results: {
+            tooluse_MCP1: {
+              tool: {
+                kind: {
+                  Mcp: {
+                    toolName: 'whats_next',
+                    serverName: 'workflows',
+                    params: { user_input: 'Do something.' }
+                  }
+                }
+              }
+            },
+            tooluse_BUILTIN1: {
+              tool: {
+                kind: {
+                  BuiltIn: {
+                    FileRead: { operations: [{ mode: 'Line', path: '/tmp/foo.txt' }] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+
+  it('should produce a tool_use and tool_result pair for each toolUse', async () => {
+    const result = await parser.parse(JSON.stringify(KIRO_WITH_RESULTS_MAP))
+    const toolMessages = result.messages.filter(m => m.type === 'tool_call')
+    // 2 tool_use + 2 tool_result
+    expect(toolMessages).toHaveLength(4)
+  })
+
+  it('should set toolType use/result metadata', async () => {
+    const result = await parser.parse(JSON.stringify(KIRO_WITH_RESULTS_MAP))
+    const uses = result.messages.filter(m => m.metadata?.toolType === 'use')
+    const results = result.messages.filter(m => m.metadata?.toolType === 'result')
+    expect(uses).toHaveLength(2)
+    expect(results).toHaveLength(2)
+  })
+
+  it('should set isBuiltIn=true for BuiltIn tools', async () => {
+    const result = await parser.parse(JSON.stringify(KIRO_WITH_RESULTS_MAP))
+    const builtInUse = result.messages.find(m => m.metadata?.toolId === 'tooluse_BUILTIN1' && m.metadata?.toolType === 'use')
+    expect(builtInUse?.metadata?.isBuiltIn).toBe(true)
+  })
+
+  it('should normalize {kind:json, data} result content to {Text: string}', async () => {
+    const result = await parser.parse(JSON.stringify(KIRO_WITH_RESULTS_MAP))
+    const mcpResult = result.messages.find(m => m.metadata?.toolId === 'tooluse_MCP1' && m.metadata?.toolType === 'result')
+    expect(mcpResult).toBeDefined()
+    const parsed = JSON.parse(mcpResult!.content)
+    expect(parsed.content[0].Text).toBeDefined()
+    expect(parsed.content[0].Text).toContain('explore')
+  })
+
+  it('should infer tool name "read" for FileRead built-in', async () => {
+    const result = await parser.parse(JSON.stringify(KIRO_WITH_RESULTS_MAP))
+    const builtInUse = result.messages.find(m => m.metadata?.toolId === 'tooluse_BUILTIN1' && m.metadata?.toolType === 'use')
+    const toolData = JSON.parse(builtInUse!.content)
+    expect(toolData.name).toBe('read')
+  })
+
+  const KIRO_WITH_STEERING = {
+    format: 'kiro-session-export-v1',
+    metadata: { title: 'Steering test', created_at: '2026-07-28T09:00:00Z' },
+    log_entries: [
+      {
+        version: 'v1',
+        kind: 'Prompt',
+        data: {
+          message_id: 'p1',
+          content: [{ kind: 'text', data: 'Start working.' }],
+          meta: { timestamp: 1785230000 }
+        }
+      },
+      {
+        version: 'v1',
+        kind: 'AssistantMessage',
+        data: {
+          message_id: 'a1',
+          content: [
+            {
+              kind: 'toolUse',
+              data: { toolUseId: 'tooluse_X', name: 'list_workflows', input: {} }
+            }
+          ]
+        }
+      },
+      {
+        version: 'v1',
+        kind: 'ToolResults',
+        data: {
+          message_id: 'tr1',
+          content: [
+            {
+              kind: 'toolResult',
+              data: {
+                toolUseId: 'tooluse_X',
+                content: [{ kind: 'json', data: { workflows: [] } }],
+                status: 'success'
+              }
+            },
+            {
+              kind: 'text',
+              data: '[LIVE STEERING - New message from user]\n\nThe user sent a new message while you are working.\n\n<user_message id="steer-abc">\nuse epcc\n</user_message>\n\nIMPORTANT: After completing your work, include a brief note.'
+            }
+          ],
+          results: {}
+        }
+      }
+    ]
+  }
+
+  it('should extract steering messages from ToolResults text content', async () => {
+    const result = await parser.parse(JSON.stringify(KIRO_WITH_STEERING))
+    const steering = result.messages.find(m => m.metadata?.isSteering === true)
+    expect(steering).toBeDefined()
+    expect(steering?.type).toBe('human')
+    expect(steering?.content).toBe('use epcc')
+  })
+
+  it('should inject steering message after the ToolResults entry', async () => {
+    const result = await parser.parse(JSON.stringify(KIRO_WITH_STEERING))
+    const steeringIdx = result.messages.findIndex(m => m.metadata?.isSteering === true)
+    const toolResultIdx = result.messages.findIndex(m => m.metadata?.toolType === 'result')
+    // Steering comes after the tool result
+    expect(steeringIdx).toBeGreaterThan(toolResultIdx)
+  })
+})
