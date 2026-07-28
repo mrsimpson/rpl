@@ -1,9 +1,30 @@
 <template>
   <div
     class="message"
-    :class="[`message-${message.type}`, { 'is-current': isCurrent, 'is-steering': message.metadata?.isSteering }]"
+    :class="[`message-${message.type}`, { 'is-current': isCurrent, 'is-steering': message.metadata?.isSteering, 'is-compaction': message.metadata?.isCompaction }]"
   >
-    <div class="message-line">
+    <!-- Compaction message: same structure as a tool_use block -->
+    <div v-if="message.metadata?.isCompaction" class="compaction-block">
+      <div class="compaction-wrapper">
+        <div class="compaction-header">
+          <span class="compaction-tool-icon">📋</span>
+          <span class="compaction-tool-name">Context Compaction</span>
+        </div>
+        <button
+          class="compaction-toggle"
+          :class="{ 'expanded': compactionExpanded }"
+          @click="compactionExpanded = !compactionExpanded"
+        >
+          <span class="toggle-icon">{{ compactionExpanded ? '▼' : '▶' }}</span>
+        </button>
+      </div>
+      <div v-if="compactionExpanded" class="compaction-body">
+        <pre class="compaction-content">{{ message.content }}</pre>
+      </div>
+    </div>
+
+    <!-- All other message types -->
+    <div v-else class="message-line">
       <span v-if="!!messagePrefix" class="message-prefix">{{
         messagePrefix
       }}</span>
@@ -32,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import TypewriterText from "./TypewriterText.vue";
 import ToolCallRenderer from "./ToolCallRenderer.vue";
 import type { Message, Settings } from "../types";
@@ -50,6 +71,8 @@ defineEmits<{
   animationComplete: [];
   characterTyped: [character: string];
 }>();
+
+const compactionExpanded = ref(false);
 
 const messagePrefix = computed(() => {
   if (props.message.metadata?.isSteering) return '⤷'
@@ -177,5 +200,93 @@ const getAnimationSpeed = () => {
 .message-human.is-steering .message-content {
   opacity: 0.75;
   font-style: italic;
+}
+
+/* Compaction block — mirrors .tool-call / .tool-call-tool_use from ToolCallRenderer */
+.compaction-block {
+  font-family: var(--font-mono);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #4caf50; /* same as .tool-call-tool_use */
+  border-radius: 6px;
+  padding: var(--spacing-2);
+  margin: var(--spacing-1) 0;
+}
+
+/* mirrors .tool-wrapper */
+.compaction-wrapper {
+  position: relative;
+}
+
+/* mirrors .tool-header inside DefaultToolRenderer */
+.compaction-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) 0;
+  font-weight: bold;
+}
+
+/* mirrors .tool-icon */
+.compaction-tool-icon {
+  font-size: 14px;
+}
+
+/* mirrors .tool-name with tool_use color */
+.compaction-tool-name {
+  color: #4caf50;
+  flex: 1;
+}
+
+/* mirrors .response-toggle-header from ToolCallRenderer */
+.compaction-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid var(--terminal-accent, #00ff41);
+  color: var(--terminal-accent, #00ff41);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.compaction-toggle:hover {
+  background: rgba(0, 255, 65, 0.1);
+}
+
+.compaction-toggle.expanded {
+  background: rgba(0, 255, 65, 0.2);
+}
+
+.toggle-icon {
+  font-size: 10px;
+}
+
+.compaction-body {
+  margin-top: var(--spacing-2);
+  animation: slideDown 0.2s ease-out;
+}
+
+.compaction-content {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--terminal-text);
+  line-height: 1.5;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; max-height: 0; overflow: hidden; }
+  to   { opacity: 1; max-height: 2000px; }
 }
 </style>
